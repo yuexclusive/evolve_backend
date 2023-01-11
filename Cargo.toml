@@ -1,0 +1,66 @@
+[package]
+edition = "2021"
+name = "evolve_backend"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# anyhow = "1.0.57"
+base64 = "0" 
+crossbeam-channel = "0" 
+ctrlc = "3" 
+env_logger = "0" 
+futures = "0" # To be able to block on async functions if you are not using an async runtime
+futures-util = "0" 
+
+actix = "0"
+actix-cors = "0"
+actix-files = {version = "0", optional = true}
+actix-web = {version = "4", features = ["openssl"]}
+actix-ws = {version = "0", optional = true}
+# actix-web-actors = "4"
+
+async_once = "0"
+# bincode = "*"
+chrono = "0"
+jsonwebtoken = "8"
+# kafka = "*"
+lazy_static = "1"
+# lettre = "0"
+log = "0"
+log4rs = {version = "1", features = ["all_components"]}
+meilisearch-sdk = "0"
+openssl = {version = "0", features = ["v110", "vendored"]}
+rand = "0"
+redis = {version = "0", features = ["tokio-comp"]}
+# redis_encoding_derive = {path = "./redis_encoding_derive"}
+async-trait = "0"
+# chan = "0"
+# chan-signal = "0"
+regex = "1"
+serde = {version = "1", features = ["derive"]}
+serde_json = "1"
+sha2 = "0"
+sqlx = {version = "0", features = [
+  "runtime-tokio-native-tls",
+  "postgres", # "chrono",
+  "chrono",
+]}
+tokio = {version = "1.23", features = ["rt-multi-thread", "macros", "time"]}
+toml = {version = "0"}
+utilities = {git = "https://github.com/yuexclusive/utilities", features = ["pg", "redis", "meilisearch", "email", "regex", "actix-web", "datetime"]}
+utoipa = {version = "2", features = ["actix_extras"], optional = true}
+utoipa-swagger-ui = {version = "2", features = ["actix-web"], optional = true}
+uuid = {version = "1", features = ["v4", "fast-rng", "macro-diagnostics"]}
+# dotenv = "0"
+# bytes = "*"
+actix-multipart = "0"
+sanitize-filename = "0"
+
+[features]
+all = ["openapi", "test_ws", "ws"]
+default = ["all"]
+openapi = ["utoipa-swagger-ui", "utoipa"]
+test_ws = []
+ws = ["actix-ws", "actix-files"]

@@ -1,0 +1,20 @@
+host = "0.0.0.0"
+name = "evolve_backend"
+port = 8881
+
+[meilisearch]
+address = "http://127.0.0.1:7700"
+api_key = "masterKey"
+
+[redis]
+# address = "redis://127.0.0.1:6379/"
+host = "127.0.0.1"
+port = 6379
+# username = ""
+# password = ""
+
+[email]
+password = "ncihabeddrwcbjfe"
+port = 465
+relay = "smtp.qq.com"
+username = "453017973@qq.com"
