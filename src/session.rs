@@ -41,7 +41,7 @@ pub async fn get_current_user_by_token(token: &str) -> BasicResult<CurrentUser> 
             });
         }
     }
-    let token = user_service::check(token)?;
-    let res = user_service::get_current_user(&token).await?;
+    let email = user_service::check(token)?;
+    let res = user_service::get_current_user(&email).await?;
     Ok(res)
 }

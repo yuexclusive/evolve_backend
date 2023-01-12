@@ -2,6 +2,8 @@
 
 use async_trait::async_trait;
 use futures::StreamExt;
+use redis::aio::ConnectionLike;
+use redis::FromRedisValue;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
@@ -9,7 +11,6 @@ use tokio::sync::Mutex;
 use utilities::business_error;
 use utilities::error::BasicResult;
 use utilities::redis::derive::{FromRedisValue, ToRedisArgs};
-use utilities::redis::sync::conn_sync;
 pub type UpdateRooms = HashMap<String, HashMap<String, String>>;
 use crate::dao::redis::lua_script;
 use std::collections::HashSet;
@@ -182,16 +183,20 @@ impl Hub for RedisHub {
     }
 
     async fn change_rooms(&self, change: RoomChangeForHub) -> BasicResult<()> {
-        let mut conn = conn_sync()?;
-
         // let input = serde_json::to_string(&change).unwrap();
+        let mut cmd = redis::cmd("evalsha");
 
-        let res = redis::cmd("evalsha")
-            .arg(lua_script::ROOMS_CHANGE.as_str()) //sha
+        cmd.arg(lua_script::ROOMS_CHANGE.get().await.as_str()) //sha
             .arg(1) //keys number
             .arg(HUB_DATA_KEY) //KEYS[1]
-            .arg(&change) //ARGV[1]
-            .query::<RoomChangeForHubResponse>(&mut conn)?;
+            .arg(&change);
+
+        let value = utilities::redis::conn()
+            .await?
+            .req_packed_command(&cmd)
+            .await?;
+
+        let res = RoomChangeForHubResponse::from_redis_value(&value)?;
 
         if res.status != 0 {
             return Err(business_error!(res.msg));

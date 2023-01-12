@@ -113,6 +113,7 @@ mod private {
             }
         }
     }
+
     pub(super) fn validate_mobile(mobile: &str) -> BasicResult<()> {
         let reg = Regex::new(MOBILE_VALIDATE_REGEX)?;
         match reg.is_match(mobile) {

@@ -62,7 +62,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         use ws::server::ChatServer;
         log::info!(
             "room change script sha: {}",
-            dao::redis::lua_script::ROOMS_CHANGE.as_str()
+            dao::redis::lua_script::ROOMS_CHANGE.get().await.as_str()
         );
 
         hub = hub::RedisHub::new().await; // redis hub for distribution

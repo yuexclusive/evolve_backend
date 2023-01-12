@@ -72,7 +72,7 @@ where
                                 Ok(res)
                             })
                         }
-                        Err(err) => Box::pin(async move { Err(unauthorized_error!(err).into()) }),
+                        Err(err) => Box::pin(async move { Err(err.into()) }),
                     }
                 }
                 Err(err) => Box::pin(async move { Err(unauthorized_error!(err).into()) }),
