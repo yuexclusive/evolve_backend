@@ -1,5 +1,5 @@
 target
 log
 .tmp
-.openapi
+openapi_cli
 .DS_Store

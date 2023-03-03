@@ -29,4 +29,4 @@ run_nginx: image_nginx
 
 .PHONY: openapi
 openapi:
-	openapi-generator generate -i http://localhost:8881/api-doc/user.json -g rust -o ./.openapi
+	openapi-generator generate -i http://localhost:8881/api-doc/user.json -g go -o ./openapi_cli/openapi

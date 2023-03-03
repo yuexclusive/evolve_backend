@@ -7,22 +7,6 @@ use utilities::error::BasicResult;
 use utilities::pg::{SqlResult, CONN};
 use utilities::validation_error;
 
-impl From<User> for user_model::User {
-    fn from(x: User) -> Self {
-        user_model::User {
-            id: x.id,
-            r#type: x.r#type,
-            email: x.email,
-            status: x.status,
-            name: x.name,
-            mobile: x.mobile,
-            laston: x.laston.map(|x| x.to_default()),
-            created_at: x.created_at.to_default(),
-            updated_at: x.updated_at.map(|x| x.to_default()),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct User {
     pub id: i64,
@@ -37,6 +21,22 @@ pub struct User {
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
     pub deleted_at: Option<DateTime<Utc>>,
+}
+
+impl From<User> for user_model::User {
+    fn from(x: User) -> Self {
+        user_model::User {
+            id: x.id,
+            r#type: x.r#type,
+            email: x.email,
+            status: x.status,
+            name: x.name,
+            mobile: x.mobile,
+            laston: x.laston.map(|x| x.to_default()),
+            created_at: x.created_at.to_default(),
+            updated_at: x.updated_at.map(|x| x.to_default()),
+        }
+    }
 }
 
 pub async fn count() -> SqlResult<usize> {

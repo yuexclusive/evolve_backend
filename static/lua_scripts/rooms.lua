@@ -1,19 +1,25 @@
--- json = require "json"
--- dofile("json.lua")
-local ChatServerForHub = {}
+--[[
+ChatServerForHub Object, for store hub data
+--]] local ChatServerForHub = {}
 
 function ChatServerForHub:new()
     local data_str = redis.call("GET", KEYS[1])
-    local t = data_str and json.decode(data_str) or { sessions = {}, rooms = {}, session_room_map = {} }
-    setmetatable(t, { __index = self })
+    local t = data_str and json.decode(data_str) or {
+        sessions = {},
+        rooms = {},
+        session_room_map = {}
+    }
+    setmetatable(t, {
+        __index = self
+    })
     return t
 end
 
 function ChatServerForHub:add(input)
-    self.sessions[input.id]                     = input.name or self.sessions[input.id] or "undefined"
-    self.rooms[input.room]                      = self.rooms[input.room] or {}
-    self.rooms[input.room][input.id]            = true
-    self.session_room_map[input.id]             = self.session_room_map[input.id] or {}
+    self.sessions[input.id] = input.name or self.sessions[input.id] or "undefined"
+    self.rooms[input.room] = self.rooms[input.room] or {}
+    self.rooms[input.room][input.id] = true
+    self.session_room_map[input.id] = self.session_room_map[input.id] or {}
     self.session_room_map[input.id][input.room] = true
 end
 
@@ -49,7 +55,10 @@ end
 
 function ChatServerForHub:handle()
     local input = json.decode(ARGV[1]);
-    local output = { status = 0, msg = "" }
+    local output = {
+        status = 0,
+        msg = ""
+    }
     if (input.type == "Add") then
         self:add(input)
     elseif (input.type == "Del") then

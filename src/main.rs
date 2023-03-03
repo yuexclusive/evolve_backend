@@ -129,11 +129,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
         #[cfg(feature = "openapi")]
         {
             use utoipa::OpenApi;
-            use utoipa_swagger_ui::SwaggerUi;
-            app = app.service(SwaggerUi::new("/swagger/user/{_:.*}").url(
-                "/api-doc/user.json",
-                openapi::user::ApiDoc::openapi().clone(),
-            ))
+            use utoipa_swagger_ui::{SwaggerUi, Url};
+            // app = app.service(SwaggerUi::new("/swagger/user/{_:.*}").url(
+            //     "/api-doc/user.json",
+            //     openapi::user::ApiDoc::openapi().clone(),
+            // ))
+            app = app.service(SwaggerUi::new("/swagger/{_:.*}").urls(vec![
+                (
+                    Url::new("user", "/api-doc/user.json"),
+                    openapi::user::ApiDoc::openapi().clone(),
+                ),
+                (
+                    Url::new("role", "/api-doc/role.json"),
+                    openapi::role::ApiDoc::openapi().clone(),
+                ),
+            ]));
         }
         app
     })
