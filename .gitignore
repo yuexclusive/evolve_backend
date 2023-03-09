@@ -3,3 +3,4 @@ log
 .tmp
 openapi_cli
 .DS_Store
+.vscode

@@ -1,4 +1,4 @@
-use crate::model::common::Pagination;
+use utilities::response::Pagination;
 use crate::model::user::{self as user_model, UserStatus, UserType};
 use chrono::{DateTime, Utc};
 use utilities::datetime::FormatDateTime;

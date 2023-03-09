@@ -1,20 +1,19 @@
 #![cfg(feature = "ws")]
 
+use crate::dao::redis::lua_script;
 use async_trait::async_trait;
 use futures::StreamExt;
 use redis::aio::ConnectionLike;
 use redis::FromRedisValue;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use tokio::sync::oneshot;
 use tokio::sync::Mutex;
 use utilities::business_error;
 use utilities::error::BasicResult;
 use utilities::redis::derive::{FromRedisValue, ToRedisArgs};
-pub type UpdateRooms = HashMap<String, HashMap<String, String>>;
-use crate::dao::redis::lua_script;
-use std::collections::HashSet;
-use tokio::sync::oneshot;
 
 #[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize, Debug)]
 pub enum RoomChangeType {
@@ -31,7 +30,9 @@ impl Default for RoomChangeType {
 
 const CLIENT_MESSAGE_CHANNEL: &str = "client_message";
 const SYSTEM_MESSAGE_CHANNEL: &str = "system_message";
-const HUB_DATA_KEY: &str = "rooms";
+
+#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize, Debug)]
+pub struct UpdateRooms(pub HashMap<String, HashMap<String, String>>);
 
 #[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize, Debug, Default)]
 pub struct RoomChangeForHub {
@@ -67,47 +68,43 @@ pub enum MessageForHub {
     System(SystemMessageForHub),
 }
 
-#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize, Debug, Default, Clone)]
-pub struct ChatServerForHub {
+#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize)]
+pub struct RetrieveRroomsReq {
+    r#type: RetrieveRroomsReqType,
+    id: String,
+}
+
+#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize)]
+pub enum RetrieveRroomsReqType {
+    #[serde(rename = "get_by_room_id")]
+    RoomID,
+    #[serde(rename = "get_by_session_id")]
+    SessionID,
+}
+
+impl RetrieveRroomsReq {
+    pub fn new(r#type: RetrieveRroomsReqType, id: String) -> Self {
+        Self { r#type, id }
+    }
+}
+
+#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize)]
+pub struct HubData {
     pub sessions: HashMap<String, String>,
     pub rooms: HashMap<String, HashMap<String, bool>>, // for json format and lua script
     pub session_room_map: HashMap<String, HashMap<String, bool>>, // for json format and lua script
 }
 
-impl ChatServerForHub {
-    pub fn get_by_session(&self, session_id: &str) -> UpdateRooms {
-        let res = self
-            .session_room_map
-            .get(session_id)
-            .unwrap_or(&Default::default())
-            .iter()
-            .map(|(room, _)| (room, self.rooms.get(room)))
-            .filter(|(_, item)| item.is_some())
-            .map(|(room, item)| {
-                (
-                    room.clone(),
-                    item.unwrap()
-                        .iter()
-                        .map(|(x, _)| (x.clone(), self.sessions.get(x).unwrap().clone()))
-                        .collect(),
-                )
-            })
-            .collect();
-        res
-    }
-}
-
 #[async_trait]
 pub trait Hub {
+    async fn get_msssage_rx(&self) -> Arc<Mutex<UnboundedReceiver<MessageForHub>>>;
+    async fn open_channel(&self, room: &str) -> BasicResult<()>;
+    async fn close_channel(&self, room: &str) -> BasicResult<()>;
     async fn publish_client_msg(&self, message: ClientMessageForHub) -> BasicResult<()>;
     async fn publish_system_msg(&self, message: SystemMessageForHub) -> BasicResult<()>;
+    async fn clean(&self, rooms: Arc<Mutex<HashMap<String, HashSet<String>>>>) -> BasicResult<()>;
     async fn change_rooms(&self, change: RoomChangeForHub) -> BasicResult<()>;
-    async fn get_rooms(&self) -> BasicResult<ChatServerForHub>;
-    async fn clean_sessions(&self, rooms: Arc<Mutex<HashMap<String, HashSet<String>>>>);
-
-    async fn open_channel(&self, room: &str);
-    async fn close_channel(&self, room: &str);
-    async fn get_msssage_rx(&self) -> Arc<Mutex<UnboundedReceiver<MessageForHub>>>;
+    async fn retrieve_rooms(&self, req: RetrieveRroomsReq) -> BasicResult<UpdateRooms>;
 }
 
 pub struct RedisHub {
@@ -187,8 +184,7 @@ impl Hub for RedisHub {
         let mut cmd = redis::cmd("evalsha");
 
         cmd.arg(lua_script::ROOMS_CHANGE.get().await.as_str()) //sha
-            .arg(1) //keys number
-            .arg(HUB_DATA_KEY) //KEYS[1]
+            .arg(0) //keys number
             .arg(&change);
 
         let value = utilities::redis::conn()
@@ -199,18 +195,29 @@ impl Hub for RedisHub {
         let res = RoomChangeForHubResponse::from_redis_value(&value)?;
 
         if res.status != 0 {
-            return Err(business_error!(res.msg));
+            return business_error!(res.msg).into();
         }
 
         Ok(())
     }
 
-    async fn get_rooms(&self) -> BasicResult<ChatServerForHub> {
-        let res = utilities::redis::sync::get::<&str, ChatServerForHub>(HUB_DATA_KEY)?;
-        Ok(res)
+    async fn retrieve_rooms(&self, req: RetrieveRroomsReq) -> BasicResult<UpdateRooms> {
+        let mut cmd = redis::cmd("evalsha");
+
+        cmd.arg(lua_script::ROOMS_RETRIEVE.get().await.as_str()) //sha
+            .arg(0) //keys number
+            .arg(&req);
+
+        let value = utilities::redis::conn()
+            .await?
+            .req_packed_command(&cmd)
+            .await?;
+
+        let data = UpdateRooms::from_redis_value(&value)?;
+        Ok(data)
     }
 
-    async fn clean_sessions(&self, rooms: Arc<Mutex<HashMap<String, HashSet<String>>>>) {
+    async fn clean(&self, rooms: Arc<Mutex<HashMap<String, HashSet<String>>>>) -> BasicResult<()> {
         for (room, sessions) in rooms.lock().await.iter() {
             for id in sessions {
                 self.change_rooms(RoomChangeForHub {
@@ -223,24 +230,24 @@ impl Hub for RedisHub {
                 .unwrap();
             }
         }
+        Ok(())
     }
 
-    async fn open_channel(&self, room: &str) {
+    async fn open_channel(&self, room: &str) -> BasicResult<()> {
         let mut channels = self.channels.lock().await;
         if !channels.contains_key(room) {
-            let (close, close_done) = Self::subscribe(&room, self.message_tx.clone())
-                .await
-                .unwrap();
-
+            let (close, close_done) = Self::subscribe(&room, self.message_tx.clone()).await?;
             channels.insert(room.to_string(), (close, close_done));
         }
+        Ok(())
     }
 
-    async fn close_channel(&self, room: &str) {
+    async fn close_channel(&self, room: &str) -> BasicResult<()> {
         let mut channels = self.channels.lock().await;
         if let Some((close, close_done)) = channels.remove(room) {
-            close.send(true).unwrap();
-            close_done.await.unwrap();
+            close.send(true)?;
+            close_done.await?; //waiting for close done
         }
+        Ok(())
     }
 }

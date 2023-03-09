@@ -1,7 +1,8 @@
-use crate::model::{common::Pagination, user as user_model};
+use crate::model::user as user_model;
 use meilisearch_sdk::search::Selectors;
 use utilities::error::BasicResult;
 use utilities::meilisearch as meilisearch_util;
+use utilities::response::Pagination;
 
 pub async fn search(
     key_word: &str,

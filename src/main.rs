@@ -65,6 +65,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             dao::redis::lua_script::ROOMS_CHANGE.get().await.as_str()
         );
 
+        log::info!(
+            "room retrieve script sha: {}",
+            dao::redis::lua_script::ROOMS_RETRIEVE.get().await.as_str()
+        );
+
         hub = hub::RedisHub::new().await; // redis hub for distribution
         let chat_server; // chat server for local machine
         (chat_server, server_tx, rooms) = ChatServer::new(hub.clone());
@@ -155,7 +160,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     #[cfg(feature = "ws")]
     {
         use ws::hub::Hub;
-        hub.clean_sessions(rooms).await;
+        hub.clean(rooms).await?;
     }
 
     log::info!("📡server stoped");

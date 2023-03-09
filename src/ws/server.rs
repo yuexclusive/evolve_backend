@@ -1,7 +1,7 @@
 #![cfg(feature = "ws")]
-
 use crate::ws::hub::{
-    self, ClientMessageForHub, MessageForHub, RoomChangeForHub, RoomChangeType, SystemMessageForHub,
+    self, ClientMessageForHub, MessageForHub, RetrieveRroomsReqType, RoomChangeForHub,
+    RoomChangeType, SystemMessageForHub,
 };
 use futures_util::future::{select, Either};
 use std::{
@@ -17,8 +17,8 @@ use tokio::{
     },
 };
 
-use super::hub::{ChatServerForHub, UpdateRooms};
-use utilities::error::BasicResult;
+use super::hub::{RetrieveRroomsReq, UpdateRooms};
+use utilities::{business_error, error::BasicResult};
 
 // use crate::{SessionID, Msg, RoomId};
 
@@ -51,8 +51,9 @@ enum Command {
         res_tx: oneshot::Sender<UpdateRooms>,
     },
 
-    GetRooms {
-        res_tx: oneshot::Sender<ChatServerForHub>,
+    GetRoomsByRoomID {
+        room_id: String,
+        res_tx: oneshot::Sender<UpdateRooms>,
     },
 
     Join {
@@ -172,8 +173,8 @@ where
         tx: mpsc::UnboundedSender<Msg>,
         id: String,
         name: String,
-    ) -> SessionID {
-        self.hub.open_channel(DEFAULT_ROOM).await;
+    ) -> BasicResult<SessionID> {
+        self.hub.open_channel(DEFAULT_ROOM).await?;
 
         // register session with random connection IDF
         self.sessions.insert(id.clone(), tx);
@@ -193,13 +194,12 @@ where
                 room: DEFAULT_ROOM.to_string(),
                 r#type: RoomChangeType::Add,
             })
-            .await
-            .unwrap();
-        id
+            .await?;
+        Ok(id)
     }
 
     /// Unregister connection from room map and broadcast disconnection message.
-    async fn disconnect(&mut self, conn_id: SessionID) -> Vec<RoomID> {
+    async fn disconnect(&mut self, conn_id: SessionID) -> BasicResult<Vec<RoomID>> {
         let mut res = Vec::new();
         // remove sender
         if self.sessions.remove(&conn_id).is_some() {
@@ -214,38 +214,55 @@ where
                             room: room.clone(),
                             r#type: RoomChangeType::Del,
                         })
-                        .await
-                        .unwrap();
+                        .await?;
 
                     res.push(room.clone())
                 }
             }
 
             for room in res.iter() {
-                if rooms.get(room).unwrap().len() == 0 {
+                if rooms
+                    .get(room)
+                    .ok_or(business_error!("can not find room"))?
+                    .len()
+                    == 0
+                {
                     rooms.remove(room);
-                    self.hub.close_channel(room).await;
+                    self.hub.close_channel(room).await?;
                 }
             }
         }
-        res
-    }
-
-    /// Returns list of created room names.
-    async fn get_rooms(&mut self) -> BasicResult<ChatServerForHub> {
-        self.hub.get_rooms().await
-    }
-
-    /// Returns list of created room names.
-    async fn get_rooms_by_session_id(&mut self, session_id: SessionID) -> BasicResult<UpdateRooms> {
-        let data = self.hub.get_rooms().await?;
-        let res = data.get_by_session(&session_id);
         Ok(res)
     }
 
+    // /// Returns list of created room names.
+    // async fn get_rooms(&mut self) -> BasicResult<ChatServerForHub> {
+    //     self.hub.get_rooms().await
+    // }
+
+    /// Returns list of created room names.
+    async fn get_rooms_by_session_id(&mut self, session_id: SessionID) -> BasicResult<UpdateRooms> {
+        self.hub
+            .retrieve_rooms(RetrieveRroomsReq::new(
+                RetrieveRroomsReqType::SessionID,
+                session_id,
+            ))
+            .await
+    }
+
+    /// Returns list of created room names.
+    async fn get_rooms_by_room_id(&mut self, room_id: String) -> BasicResult<UpdateRooms> {
+        self.hub
+            .retrieve_rooms(RetrieveRroomsReq::new(
+                RetrieveRroomsReqType::RoomID,
+                room_id,
+            ))
+            .await
+    }
+
     /// Join room, send disconnect message to old room send join message to new room.
-    async fn join_room(&mut self, session_id: SessionID, room: String) {
-        self.hub.open_channel(&room).await;
+    async fn join_room(&mut self, session_id: SessionID, room: String) -> BasicResult<()> {
+        self.hub.open_channel(&room).await?;
 
         self.rooms
             .lock()
@@ -261,15 +278,15 @@ where
                 room: room.clone(),
                 r#type: RoomChangeType::Add,
             })
-            .await
-            .unwrap();
+            .await?;
+        Ok(())
     }
 
-    async fn quit_room(&mut self, session_id: SessionID, room: String) {
+    async fn quit_room(&mut self, session_id: SessionID, room: String) -> BasicResult<()> {
         if let Some(v) = self.rooms.lock().await.get_mut(&room) {
             if v.remove(&session_id) {
                 if v.len() == 0 {
-                    self.hub.close_channel(&room).await;
+                    self.hub.close_channel(&room).await?;
                 }
             }
         }
@@ -281,8 +298,9 @@ where
                 room: room.clone(),
                 r#type: RoomChangeType::Del,
             })
-            .await
-            .unwrap();
+            .await?;
+        
+        Ok(())
     }
 
     async fn change_name(&mut self, session_id: SessionID, name: String) {
@@ -317,14 +335,13 @@ where
                         id,
                         name,
                     } => {
-                        let conn_id = self.connect(conn_tx, id, name).await;
-                        let _ = res_tx.send(conn_id);
+                        let _ = res_tx.send(self.connect(conn_tx, id, name).await.unwrap());
                     }
 
                     Command::Disconnect { session_id, res_tx } => {
                         let res = self.disconnect(session_id).await;
 
-                        let _ = res_tx.send(res);
+                        let _ = res_tx.send(res.unwrap());
                     }
 
                     Command::GetRoomsBySessionID { session_id, res_tx } => {
@@ -332,8 +349,8 @@ where
                             res_tx.send(self.get_rooms_by_session_id(session_id).await.unwrap());
                     }
 
-                    Command::GetRooms { res_tx } => {
-                        let _ = res_tx.send(self.get_rooms().await.unwrap());
+                    Command::GetRoomsByRoomID { room_id, res_tx } => {
+                        let _ = res_tx.send(self.get_rooms_by_room_id(room_id).await.unwrap());
                     }
 
                     Command::Join { conn, room, res_tx } => {
@@ -462,11 +479,16 @@ impl ChatServerHandle {
         res_rx.await.unwrap()
     }
 
-    pub async fn get_rooms(&self) -> ChatServerForHub {
+    pub async fn get_rooms_by_room_id(&self, room_id: &str) -> UpdateRooms {
         let (res_tx, res_rx) = oneshot::channel();
 
         // unwrap: chat server should not have been dropped
-        self.cmd_tx.send(Command::GetRooms { res_tx }).unwrap();
+        self.cmd_tx
+            .send(Command::GetRoomsByRoomID {
+                room_id: room_id.to_string(),
+                res_tx,
+            })
+            .unwrap();
 
         // unwrap: chat server does not drop our response channel
         res_rx.await.unwrap()

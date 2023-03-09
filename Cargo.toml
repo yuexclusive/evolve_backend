@@ -30,7 +30,7 @@ lazy_static = "1"
 # lettre = "0"
 log = "0"
 log4rs = {version = "1", features = ["all_components"]}
-meilisearch-sdk = "0"
+meilisearch-sdk = "0.22"
 openssl = {version = "0", features = ["v110", "vendored"]}
 rand = "0"
 redis = {version = "0", features = ["tokio-comp"]}
@@ -49,7 +49,8 @@ sqlx = {version = "0", features = [
 ]}
 tokio = {version = "1.23", features = ["rt-multi-thread", "macros", "time"]}
 toml = {version = "0"}
-utilities = {git = "https://github.com/yuexclusive/utilities", features = ["pg", "redis", "meilisearch", "email", "regex", "actix-web", "datetime"]}
+# utilities = {git = "https://github.com/yuexclusive/utilities", features = ["pg", "redis", "meilisearch", "email", "regex", "actix-web", "datetime"]}
+utilities = {path = "../../utilities", features = ["pg", "redis", "meilisearch", "email", "regex", "actix-web", "datetime"]}
 utoipa = {version = "2", features = ["actix_extras"], optional = true}
 utoipa-swagger-ui = {version = "2", features = ["actix-web"], optional = true}
 uuid = {version = "1", features = ["v4", "fast-rng", "macro-diagnostics"]}
@@ -57,6 +58,7 @@ uuid = {version = "1", features = ["v4", "fast-rng", "macro-diagnostics"]}
 # bytes = "*"
 actix-multipart = "0"
 sanitize-filename = "0"
+# syn = "*"
 
 [features]
 all = ["openapi", "test_ws", "ws"]

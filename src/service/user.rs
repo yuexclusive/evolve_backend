@@ -4,7 +4,7 @@ use crate::{
         pg::user as pg_user_dao,
         redis::user as redis_user_dao,
     },
-    model::{common::Pagination, user as user_model},
+    model::user as user_model,
 };
 
 use futures::TryFutureExt;
@@ -12,7 +12,9 @@ use rand::Rng;
 
 use serde::{Deserialize, Serialize};
 
-use utilities::{email as email_util, error::BasicResult, hint_error, unauthorized_error};
+use utilities::{
+    email as email_util, error::BasicResult, hint_error, response::Pagination, unauthorized_error,
+};
 
 mod private {
     use base64::{engine::general_purpose, Engine as _};

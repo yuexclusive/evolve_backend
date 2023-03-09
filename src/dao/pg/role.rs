@@ -1,4 +1,4 @@
-use crate::model::common::Pagination;
+use utilities::response::Pagination;
 use chrono::{DateTime, Utc};
 use utilities::pg::{SqlResult, CONN};
 

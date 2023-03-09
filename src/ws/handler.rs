@@ -1,5 +1,4 @@
 #![cfg(feature = "ws")]
-
 use std::time::{Duration, Instant};
 
 use actix_ws::Message;
@@ -20,9 +19,72 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 /// How long before lack of client response causes a timeout
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
-const UPDATE_ROOMS_PRE: &str = "update_rooms:";
+pub enum NotifyType<'a> {
+    UpdateSession {
+        session: &'a mut actix_ws::Session,
+        name: &'a str,
+        room: &'a str,
+    },
+
+    List {
+        chat_server: &'a ChatServerHandle,
+        session: &'a mut actix_ws::Session,
+        session_id: &'a str,
+    },
+
+    JoinRoom {
+        chat_server: &'a ChatServerHandle,
+        session_id: &'a str,
+        name: &'a str,
+        room: &'a str,
+    },
+    QuitRoom {
+        chat_server: &'a ChatServerHandle,
+        session_id: &'a str,
+        name: &'a str,
+        room: &'a str,
+    },
+    UpdateName {
+        chat_server: &'a ChatServerHandle,
+        session_id: &'a str,
+        name: &'a str,
+        old_name: &'a str,
+    },
+    Message {
+        chat_server: &'a ChatServerHandle,
+        session_id: &'a str,
+        name: &'a str,
+        room: &'a str,
+        msg: &'a str,
+    },
+}
+
 const UPDATE_SESSION_PRE: &str = "update_session:";
+const LIST_PRE: &str = "list:";
+const JOIN_ROOM_PRE: &str = "join_room:";
+const QUIT_ROOM_PRE: &str = "quit_room:";
+const UPDATE_NAME_PRE: &str = "update_name:";
 const MESSAGE_PRE: &str = "message:";
+
+#[derive(Serialize)]
+struct UpdateSession<'a> {
+    pub room: &'a str,
+    pub name: &'a str,
+}
+
+#[derive(Serialize)]
+struct RoomChange<'a> {
+    pub session_id: &'a str,
+    pub name: &'a str,
+    pub room: &'a str,
+}
+
+#[derive(Serialize)]
+struct UpdateName<'a> {
+    pub session_id: &'a str,
+    pub name: &'a str,
+    pub old_name: &'a str,
+}
 
 #[derive(Serialize)]
 pub struct MessageContent<'a> {
@@ -49,80 +111,134 @@ impl<'a> MessageContent<'a> {
     }
 }
 
-#[derive(Serialize)]
-struct UpdateSession<'a> {
-    pub room: &'a str,
-    pub name: &'a str,
-}
+async fn notify<'a>(ty: NotifyType<'a>) {
+    match ty {
+        NotifyType::UpdateSession {
+            session,
+            name,
+            room,
+        } => {
+            session
+                .text(format!(
+                    "{UPDATE_SESSION_PRE}{}",
+                    serde_json::to_string(&UpdateSession { room, name }).unwrap()
+                ))
+                .await
+                .unwrap();
+        }
 
-async fn update_session(session: &mut actix_ws::Session, room: &str, name: &str) {
-    let obj = UpdateSession { room, name };
-    let str = serde_json::to_string(&obj).unwrap();
-    let content = format!("{UPDATE_SESSION_PRE}{}", str);
-    session.text(content).await.unwrap();
-}
+        NotifyType::List {
+            chat_server,
+            session,
+            session_id,
+        } => {
+            let rooms = chat_server.get_rooms_by_session_id(session_id).await;
+            session
+                .text(format!(
+                    "{LIST_PRE}{}",
+                    serde_json::to_string(&rooms).unwrap()
+                ))
+                .await
+                .unwrap();
+        }
 
-async fn notify_update_rooms(chat_server: &ChatServerHandle, room: Option<&str>, session_id: &str) {
-    let rooms = chat_server.get_rooms().await;
-    let mut target_rooms = vec![];
-    match room {
-        Some(r) => target_rooms.push(r),
-        None => {
-            if let Some(rooms) = rooms.session_room_map.get(session_id) {
-                for (s, _) in rooms {
-                    target_rooms.push(s)
+        NotifyType::JoinRoom {
+            chat_server,
+            name,
+            session_id,
+            room,
+        } => {
+            let rooms = chat_server.get_rooms_by_room_id(room).await;
+            for (r, sessions) in rooms.0.iter() {
+                for (to_id, _) in sessions {
+                    chat_server
+                        .send_system_message(
+                            r,
+                            to_id,
+                            &format!(
+                                "{JOIN_ROOM_PRE}{}",
+                                serde_json::to_string(&RoomChange {
+                                    session_id,
+                                    room,
+                                    name
+                                })
+                                .unwrap()
+                            ),
+                        )
+                        .await;
                 }
             }
         }
-    }
-
-    for r in target_rooms {
-        if let Some(sessions) = rooms.rooms.get(r) {
-            for (to_id, _) in sessions {
-                chat_server
-                    .send_system_message(
-                        r,
-                        to_id,
-                        &format!(
-                            "{UPDATE_ROOMS_PRE}{}",
-                            serde_json::to_string(&rooms.get_by_session(to_id)).unwrap()
-                        ),
-                    )
-                    .await;
+        NotifyType::QuitRoom {
+            chat_server,
+            session_id,
+            name,
+            room,
+        } => {
+            let rooms = chat_server.get_rooms_by_room_id(room).await;
+            for (r, sessions) in rooms.0.iter() {
+                for (to_id, _) in sessions {
+                    chat_server
+                        .send_system_message(
+                            r,
+                            to_id,
+                            &format!(
+                                "{QUIT_ROOM_PRE}{}",
+                                serde_json::to_string(&RoomChange {
+                                    session_id,
+                                    room,
+                                    name
+                                })
+                                .unwrap()
+                            ),
+                        )
+                        .await;
+                }
             }
         }
+        NotifyType::UpdateName {
+            chat_server,
+            session_id,
+            name,
+            old_name,
+        } => {
+            let rooms = chat_server.get_rooms_by_session_id(session_id).await;
+            for (r, sessions) in rooms.0.iter() {
+                for (to_id, _) in sessions {
+                    chat_server
+                        .send_system_message(
+                            r,
+                            to_id,
+                            &format!(
+                                "{UPDATE_NAME_PRE}{}",
+                                serde_json::to_string(&UpdateName {
+                                    session_id,
+                                    name,
+                                    old_name
+                                })
+                                .unwrap()
+                            ),
+                        )
+                        .await;
+                }
+            }
+        }
+        NotifyType::Message {
+            chat_server,
+            session_id,
+            name,
+            room,
+            msg,
+        } => {
+            chat_server
+                .send_message(
+                    room.to_string(),
+                    session_id.to_string(),
+                    MessageContent::format(room, session_id, name, msg),
+                )
+                .await
+        }
     }
-}
-
-async fn notify_update_rooms_to_self(
-    chat_server: &ChatServerHandle,
-    session: &mut actix_ws::Session,
-    session_id: &str,
-) {
-    let rooms = chat_server.get_rooms_by_session_id(session_id).await;
-    session
-        .text(format!(
-            "{UPDATE_ROOMS_PRE}{}",
-            serde_json::to_string(&rooms).unwrap()
-        ))
-        .await
-        .unwrap();
-}
-
-async fn send_message(
-    chat_server: &ChatServerHandle,
-    room: &str,
-    session_id: &str,
-    name: &str,
-    msg: &str,
-) {
-    chat_server
-        .send_message(
-            room.to_string(),
-            session_id.to_string(),
-            MessageContent::format(room, session_id, name, msg),
-        )
-        .await
 }
 
 /// Echo text & binary messages received from the client, respond to ping messages, and monitor
@@ -146,8 +262,20 @@ pub async fn chat_ws(
         .connect(conn_tx, session_id.clone(), session_name)
         .await;
 
-    update_session(&mut session, &room, &name).await;
-    notify_update_rooms(&chat_server, Some(DEFAULT_ROOM), &session_id).await;
+    notify(NotifyType::UpdateSession {
+        session: &mut session,
+        name: &name,
+        room: &room,
+    })
+    .await;
+
+    notify(NotifyType::JoinRoom {
+        chat_server: &chat_server,
+        session_id: &session_id,
+        name: &name,
+        room: &DEFAULT_ROOM,
+    })
+    .await;
 
     let close_reason = loop {
         // most of the futures we process need to be stack-pinned to work with select()
@@ -240,8 +368,14 @@ pub async fn chat_ws(
 
     let rooms = chat_server.disconnect(conn_id).await;
 
-    for room in rooms.iter() {
-        notify_update_rooms(&chat_server, Some(room), &session_id).await;
+    for room in rooms {
+        notify(NotifyType::QuitRoom {
+            chat_server: &chat_server,
+            session_id: &session_id,
+            name: &name,
+            room: &room,
+        })
+        .await;
     }
 
     // attempt to close connection gracefully
@@ -250,7 +384,7 @@ pub async fn chat_ws(
 
 async fn process_text_msg(
     chat_server: &ChatServerHandle,
-    session: &mut actix_ws::Session,
+    mut session: &mut actix_ws::Session,
     text: &str,
     session_id: SessionID,
     name: &mut String,
@@ -266,15 +400,33 @@ async fn process_text_msg(
         // unwrap: we have guaranteed non-zero string length already
         match cmd_args.next().unwrap() {
             "/list" => {
-                notify_update_rooms_to_self(chat_server, session, &session_id).await;
+                notify(NotifyType::List {
+                    chat_server: &chat_server,
+                    session_id: &session_id,
+                    session,
+                })
+                .await;
             }
 
             "/join" => match cmd_args.next() {
                 Some(r) => {
                     chat_server.join_room(session_id.clone(), r).await;
                     *room = r.to_string();
-                    update_session(session, &room, &name).await;
-                    notify_update_rooms(chat_server, Some(r), &session_id).await;
+
+                    notify(NotifyType::UpdateSession {
+                        session: &mut session,
+                        name: &name,
+                        room: &room,
+                    })
+                    .await;
+
+                    notify(NotifyType::JoinRoom {
+                        chat_server: &chat_server,
+                        session_id: &session_id,
+                        name: &name,
+                        room: &room,
+                    })
+                    .await;
                 }
 
                 None => {
@@ -291,12 +443,24 @@ async fn process_text_msg(
                             .unwrap();
                         return;
                     }
+
+                    notify(NotifyType::QuitRoom {
+                        chat_server: &chat_server,
+                        session_id: &session_id,
+                        name: &name,
+                        room: &room,
+                    })
+                    .await;
+
                     chat_server.quit_room(session_id.clone(), r).await;
                     *room = DEFAULT_ROOM.to_string();
 
-                    update_session(session, &room, &name).await;
-                    notify_update_rooms(chat_server, Some(r), &session_id).await;
-                    notify_update_rooms_to_self(chat_server, session, &session_id).await;
+                    notify(NotifyType::UpdateSession {
+                        session: &mut session,
+                        name: &name,
+                        room: &room,
+                    })
+                    .await;
                 }
 
                 None => {
@@ -306,13 +470,26 @@ async fn process_text_msg(
 
             "/name" => match cmd_args.next() {
                 Some(new_name) => {
+                    let old_name = name.clone();
                     *name = new_name.to_string();
                     chat_server
                         .change_name(session_id.clone(), new_name.clone())
                         .await;
 
-                    update_session(session, &room, &name).await;
-                    notify_update_rooms(chat_server, None, &session_id).await;
+                    notify(NotifyType::UpdateSession {
+                        session: &mut session,
+                        name: &name,
+                        room: &room,
+                    })
+                    .await;
+
+                    notify(NotifyType::UpdateName {
+                        chat_server: &chat_server,
+                        session_id: &session_id,
+                        name: &name,
+                        old_name: &old_name,
+                    })
+                    .await;
                 }
                 None => {
                     session.text("!!! name is required").await.unwrap();
@@ -327,6 +504,13 @@ async fn process_text_msg(
             }
         }
     } else {
-        send_message(chat_server, room, &session_id, name, msg).await;
+        notify(NotifyType::Message {
+            chat_server: &chat_server,
+            session_id: &session_id,
+            name: &name,
+            room: &room,
+            msg: &msg,
+        })
+        .await;
     }
 }

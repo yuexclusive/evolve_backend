@@ -1,6 +1,6 @@
 #![cfg(feature = "openapi")]
 
-use crate::model::common as common_model;
+use utilities::response::MsgResponse;
 
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
@@ -13,8 +13,7 @@ use utoipa::{
     ),
     components(
         schemas(
-            common_model::MsgResponse,
-            common_model::ErrorResponse,
+            MsgResponse,
         )
     ),
     tags(

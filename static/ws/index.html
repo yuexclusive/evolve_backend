@@ -153,8 +153,8 @@
           let obj = JSON.parse(message);
           $name.textContent = obj.name
           $room.textContent = obj.room
-        } else if (str.length > 13 && str.substr(0, 13) == "update_rooms:") {
-          let message = str.substr(13);
+        } else if (str.length > 5 && str.substr(0, 5) == "list:") {
+          let message = str.substr(5);
           let obj = JSON.parse(message);
           for (room in obj) {
             log("room: " + room)
@@ -162,6 +162,18 @@
               log("   session: " + obj[room][session])
             }
           }
+        } else if (str.length > 10 && str.substr(0, 10) == "join_room:") {
+          let message = str.substr(10);
+          let obj = JSON.parse(message);
+          log("" + obj.name + " join room: " + obj.room)
+        } else if (str.length > 10 && str.substr(0, 10) == "quit_room:") {
+          let message = str.substr(10);
+          let obj = JSON.parse(message);
+          log("" + obj.name + " quit from: " + obj.room)
+        } else if (str.length > 12 && str.substr(0, 12) == "update_name:") {
+          let message = str.substr(12);
+          let obj = JSON.parse(message);
+          log(obj.old_name + " change name to: " + obj.name)
         } else if (str.length > 8 && str.substr(0, 8) == "message:") {
           let message = str.substr(8);
           let obj = JSON.parse(message);

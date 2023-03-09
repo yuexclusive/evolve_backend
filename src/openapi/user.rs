@@ -2,7 +2,7 @@
 
 use crate::controller::user as user_controller;
 use crate::model::user as user_model;
-use crate::model::common as common_model;
+use utilities::response::{MsgResponse,ErrorResponse};
 
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
@@ -44,8 +44,8 @@ use utoipa::{
             user_model::SendEmailResponse,
             user_model::UserUpdateReq,
             user_model::UserUpdateResponse,
-            common_model::MsgResponse,
-            common_model::ErrorResponse,
+            MsgResponse,
+            ErrorResponse,
             user_model::UserDeleteReq,
         )
     ),
