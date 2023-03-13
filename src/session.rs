@@ -2,15 +2,15 @@ use crate::model::user::CurrentUser;
 use crate::service::user as user_service;
 use actix_web::HttpRequest;
 use utilities::error::BasicResult;
-use utilities::unauthorized_error;
+use utilities::unauthorized;
 
 pub async fn get_current_user(req: &HttpRequest) -> BasicResult<CurrentUser> {
     let email = req
         .headers()
         .get("email")
-        .ok_or_else(|| unauthorized_error!("can not get email from header"))?
+        .ok_or_else(|| unauthorized!("can not get email from header"))?
         .to_str()
-        .map_err(|err| unauthorized_error!(err))?;
+        .map_err(|err| unauthorized!(err))?;
     let res = user_service::get_current_user(email).await?;
     Ok(res)
 }

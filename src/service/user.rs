@@ -13,7 +13,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use utilities::{
-    email as email_util, error::BasicResult, hint_error, response::Pagination, unauthorized_error,
+    email as email_util, error::BasicResult, hint, response::Pagination, unauthorized,
 };
 
 mod private {
@@ -33,7 +33,7 @@ mod private {
     use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
     use regex::Regex;
     use sha2::Digest;
-    use utilities::{datetime::FormatDateTime, unauthorized_error, validation_error};
+    use utilities::{datetime::FormatDateTime, unauthorized, validate_error};
     use uuid::Uuid;
     struct Token {
         secret: &'static str,
@@ -80,20 +80,20 @@ mod private {
                 let pwd = hash_password(pwd, salt);
                 match pwd.as_str().cmp(v.as_ref()) {
                     Ordering::Equal => Ok(()),
-                    _ => validation_error!("wrong password").into(),
+                    _ => validate_error!("wrong password").into(),
                 }
             }
-            None => validation_error!("password has not been initialized").into(),
+            None => validate_error!("password has not been initialized").into(),
         }
     }
 
     pub(super) fn validate_email(email: &str) -> BasicResult<()> {
         match email.is_empty() {
-            true => validation_error!("please type in email").into(),
+            true => validate_error!("please type in email").into(),
             _ => {
                 let reg = Regex::new(EMAIL_VALIDATE_REGEX)?;
                 match reg.is_match(email) {
-                    false => validation_error!("invalid email").into(),
+                    false => validate_error!("invalid email").into(),
                     _ => Ok(()),
                 }
             }
@@ -102,12 +102,12 @@ mod private {
 
     pub(super) fn validate_pwd(pwd: &str) -> BasicResult<()> {
         match pwd.is_empty() {
-            true => Err(validation_error!("please type in passwd")),
+            true => Err(validate_error!("please type in passwd")),
             _ => {
                 let reg = Regex::new(PWD_VALIDATE_REGEX)?; //6位字母+数字,字母开头
                 match reg.is_match(pwd) {
                     false => {
-                        validation_error!("invalid passowrd: length>=6, a-z and 0-9 is demanded")
+                        validate_error!("invalid passowrd: length>=6, a-z and 0-9 is demanded")
                             .into()
                     }
                     _ => Ok(()),
@@ -119,7 +119,7 @@ mod private {
     pub(super) fn validate_mobile(mobile: &str) -> BasicResult<()> {
         let reg = Regex::new(MOBILE_VALIDATE_REGEX)?;
         match reg.is_match(mobile) {
-            false => validation_error!("invalid mobile").into(),
+            false => validate_error!("invalid mobile").into(),
             _ => Ok(()),
         }
     }
@@ -132,7 +132,7 @@ mod private {
         let email_code: Option<String> = redis_user_dao::get_email_code(email, from).await?;
 
         match email_code.is_none() || email_code.unwrap() != code {
-            true => validation_error!(format!("invalid code {}", code)).into(),
+            true => validate_error!(format!("invalid code {}", code)).into(),
             _ => Ok(()),
         }
     }
@@ -141,7 +141,7 @@ mod private {
         validate_email(email)?;
         let res = pg_user_dao::get_by_email(email).await?;
         match res.deleted_at {
-            Some(_) => validation_error!("email has already been deleted").into(),
+            Some(_) => validate_error!("email has already been deleted").into(),
             _ => Ok(res),
         }
     }
@@ -149,7 +149,7 @@ mod private {
     pub(super) async fn validate_not_exist_email(email: &str) -> BasicResult<()> {
         validate_email(email)?;
         match pg_user_dao::get_by_email(email).await {
-            Ok(_) => validation_error!(format!("email {} already exist", email)).into(),
+            Ok(_) => validate_error!(format!("email {} already exist", email)).into(),
             _ => Ok(()),
         }
     }
@@ -162,7 +162,7 @@ mod private {
             &DecodingKey::from_secret(TOKEN.secret.as_ref()),
             &validation,
         )
-        .map_err(|err| unauthorized_error!(err))?;
+        .map_err(|err| unauthorized!(err))?;
         Ok(claims.claims.aud)
     }
 
@@ -321,7 +321,7 @@ pub async fn send_email_code(
     }
 
     if redis_user_dao::exist_email_code(email, from).await? {
-        return hint_error!("the validation code has already send to your mail box, please check or resend after a few minutes").into();
+        return hint!("the validation code has already send to your mail box, please check or resend after a few minutes").into();
     }
 
     let code = rand::thread_rng().gen_range(100000..999999);
@@ -358,7 +358,7 @@ pub fn check(token: &str) -> BasicResult<String> {
 pub async fn get_current_user(email: &str) -> BasicResult<user_model::CurrentUser> {
     let res = redis_user_dao::get_current_user(email)
         .await
-        .map_err(|err| unauthorized_error!(err))?;
+        .map_err(|err| unauthorized!(err))?;
     Ok(res)
 }
 

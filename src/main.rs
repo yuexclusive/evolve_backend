@@ -101,10 +101,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         .service(user::update)
                         .service(user::get_current_user)
                         .service(user::delete)
-                        .service(user::get)
-                        .service(user::send_email_code)
-                        .service(user::validate_exist_email)
-                        .service(user::validate_not_exist_email),
+                        .service(user::get),
                 ),
         );
         app = app.service(

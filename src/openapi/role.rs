@@ -1,12 +1,7 @@
 #![cfg(feature = "openapi")]
-
+use crate::openapi::security::SecurityAddon;
 use utilities::response::MsgResponse;
-
-use utoipa::{
-    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
-    Modify, OpenApi,
-};
-
+use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
     paths(
@@ -22,16 +17,3 @@ use utoipa::{
     modifiers(&SecurityAddon)
 )]
 pub struct ApiDoc;
-
-struct SecurityAddon;
-
-impl Modify for SecurityAddon {
-    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
-        let components = openapi.components.as_mut().unwrap(); // we can unwrap safely since there already is components registered.
-
-        components.add_security_scheme(
-            "token",
-            SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("Authorization"))),
-        )
-    }
-}

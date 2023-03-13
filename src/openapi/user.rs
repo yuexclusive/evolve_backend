@@ -1,13 +1,9 @@
 #![cfg(feature = "openapi")]
-
+use utoipa::OpenApi;
+use utilities::response::{MsgResponse,ErrorResponse};
 use crate::controller::user as user_controller;
 use crate::model::user as user_model;
-use utilities::response::{MsgResponse,ErrorResponse};
-
-use utoipa::{
-    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
-    Modify, OpenApi,
-};
+use crate::openapi::security::SecurityAddon;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -56,16 +52,4 @@ use utoipa::{
 )]
 pub struct ApiDoc;
 
-struct SecurityAddon;
-
-impl Modify for SecurityAddon {
-    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
-        let components = openapi.components.as_mut().unwrap(); // we can unwrap safely since there already is components registered.
-
-        components.add_security_scheme(
-            "token",
-            SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("Authorization"))),
-        )
-    }
-}
 

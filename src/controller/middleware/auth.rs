@@ -8,7 +8,7 @@ use actix_web::{
     Error,
 };
 use futures_util::future::LocalBoxFuture;
-use utilities::unauthorized_error;
+use utilities::unauthorized;
 
 // There are two steps in middleware processing.
 // 1. Middleware initialization, middleware factory gets called with
@@ -53,7 +53,7 @@ where
     forward_ready!(service);
 
     fn call(&self, mut req: ServiceRequest) -> Self::Future {
-        let authentication = req.headers().get("Authorization");
+        let authentication = req.headers().get("token");
         match authentication {
             Some(v) => match v.to_str() {
                 Ok(v) => {
@@ -75,9 +75,9 @@ where
                         Err(err) => Box::pin(async move { Err(err.into()) }),
                     }
                 }
-                Err(err) => Box::pin(async move { Err(unauthorized_error!(err).into()) }),
+                Err(err) => Box::pin(async move { Err(unauthorized!(err).into()) }),
             },
-            None => Box::pin(async move { Err(unauthorized_error!("unauthorized").into()) }),
+            None => Box::pin(async move { Err(unauthorized!("unauthorized").into()) }),
         }
     }
 }

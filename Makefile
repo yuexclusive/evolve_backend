@@ -27,6 +27,9 @@ image_nginx: build
 run_nginx: image_nginx
 	docker run --rm -p 8881:80 -it yuexclusive/evolve_backend_nginx:latest
 
+
+MODULE_NAME:="user"
+LNGUAGE:="rust"
 .PHONY: openapi
 openapi:
-	openapi-generator generate -i http://localhost:8881/api-doc/user.json -g go -o ./openapi_cli/openapi
+	openapi-generator generate -i http://localhost:8881/api-doc/${MODULE_NAME}.json -g ${LNGUAGE} --package-name ${MODULE_NAME}_cli -o ./openapi_cli/${MODULE_NAME}_cli

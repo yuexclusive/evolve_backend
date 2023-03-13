@@ -245,8 +245,8 @@ impl Hub for RedisHub {
     async fn close_channel(&self, room: &str) -> BasicResult<()> {
         let mut channels = self.channels.lock().await;
         if let Some((close, close_done)) = channels.remove(room) {
-            close.send(true)?;
-            close_done.await?; //waiting for close done
+            close.send(true).unwrap();
+            close_done.await.unwrap(); //waiting for close done
         }
         Ok(())
     }

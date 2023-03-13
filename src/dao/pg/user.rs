@@ -5,7 +5,7 @@ use utilities::datetime::FormatDateTime;
 use utilities::error::BasicResult;
 
 use utilities::pg::{SqlResult, CONN};
-use utilities::validation_error;
+use utilities::validate_error;
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -160,7 +160,7 @@ where email = $1
     .fetch_one(CONN.get().await)
     .await
     .map_err(|err| match err {
-        sqlx::Error::RowNotFound => validation_error!(format!("email: {} is not exist", email)),
+        sqlx::Error::RowNotFound => validate_error!(format!("email: {} is not exist", email)),
         _ => err.into(),
     })?;
 

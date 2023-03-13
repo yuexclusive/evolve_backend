@@ -111,7 +111,7 @@ impl<'a> MessageContent<'a> {
     }
 }
 
-async fn notify<'a>(ty: NotifyType<'a>) {
+async fn notify(ty: NotifyType<'_>) {
     match ty {
         NotifyType::UpdateSession {
             session,

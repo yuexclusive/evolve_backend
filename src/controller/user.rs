@@ -76,6 +76,42 @@ pub async fn register(req: Json<user_model::RegisterReq>) -> Result<impl Respond
     msg!("ok")
 }
 
+#[cfg_attr(feature = "openapi", utoipa::path(
+    path = "/api/validate_exist_email/{email}",
+    params(
+        ("email", description = "email")
+    ),
+    responses(
+        (status = 200, description = "successfully", body = MsgResponse),
+        (status = 400, description = "bad request", body = ErrorResponse),
+        (status = 500, description = "internal server error", body = ErrorResponse)
+    )
+))]
+#[get("/validate_exist_email/{email}")]
+pub async fn validate_exist_email(email: Path<String>) -> Result<impl Responder> {
+    user_service::validate_exist_email(&email.into_inner()).await?;
+
+    msg!("ok")
+}
+
+#[cfg_attr(feature = "openapi", utoipa::path(
+    path = "/api/validate_not_exist_email/{email}",
+    params(
+        ("email", description = "email")
+    ),
+    responses(
+        (status = 200, description = "successfully", body = MsgResponse),
+        (status = 400, description = "bad request", body = ErrorResponse),
+        (status = 500, description = "internal server error", body = ErrorResponse)
+    )
+))]
+#[get("/validate_not_exist_email/{email}")]
+pub async fn validate_not_exist_email(email: Path<String>) -> Result<impl Responder> {
+    user_service::validate_not_exist_email(&email.into_inner()).await?;
+
+    msg!("ok")
+}
+
 #[cfg_attr(feature = "openapi", derive(utoipa::IntoParams))]
 #[derive(Deserialize)]
 pub struct SearchReq {
@@ -175,48 +211,4 @@ pub async fn update(req: Json<user_model::UserUpdateReq>) -> Result<impl Respond
 pub async fn delete(req: Json<user_model::UserDeleteReq>) -> Result<impl Responder> {
     let res = user_service::delete(&req.ids).await?;
     data!(res)
-}
-
-#[cfg_attr(feature = "openapi", utoipa::path(
-    path = "/api/user/validate_exist_email/{email}",
-    params(
-        ("email", description = "email")
-    ),
-    responses(
-        (status = 200, description = "successfully", body = MsgResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 401, description = "unthorized", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
-    ),
-    security(
-        ("token" = [])
-    )
-))]
-#[get("/validate_exist_email/{email}")]
-pub async fn validate_exist_email(email: Path<String>) -> Result<impl Responder> {
-    user_service::validate_exist_email(&email.into_inner()).await?;
-
-    msg!("ok")
-}
-
-#[cfg_attr(feature = "openapi", utoipa::path(
-    path = "/api/user/validate_not_exist_email/{email}",
-    params(
-        ("email", description = "email")
-    ),
-    responses(
-        (status = 200, description = "successfully", body = MsgResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 401, description = "unthorized", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
-    ),
-    security(
-        ("token" = [])
-    )
-))]
-#[get("/validate_not_exist_email/{email}")]
-pub async fn validate_not_exist_email(email: Path<String>) -> Result<impl Responder> {
-    user_service::validate_not_exist_email(&email.into_inner()).await?;
-
-    msg!("ok")
 }
