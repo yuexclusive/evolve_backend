@@ -45,6 +45,7 @@ pub async fn change_pwd(req: Json<user_model::ChangePasswordReq>) -> Result<impl
     responses(
         (status = 200, description = "successfully", body = SendEmailResponse),
         (status = 400, description = "bad request", body = ErrorResponse),
+        (status = 452, description = "hint", body = MsgResponse),
         (status = 500, description = "internal server error", body = ErrorResponse)
     )
 ))]
