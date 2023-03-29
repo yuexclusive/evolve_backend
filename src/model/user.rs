@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use utilities::redis::derive::{FromRedisValue, ToRedisArgs};
+use utilities::redis::derive::{from_redis, to_redis};
 #[cfg(feature = "openapi")]
 use utoipa::ToSchema;
 
@@ -103,7 +103,8 @@ pub struct SearchedUser {
 
 // #[derive(Debug, Clone, Serialize, Deserialize, ToRedisArgs, FromRedisValue, ToSchema)]
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, ToRedisArgs, FromRedisValue)]
+#[to_redis]
+#[from_redis]
 pub struct CurrentUser {
     pub id: i64,
     pub r#type: UserType,

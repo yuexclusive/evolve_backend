@@ -13,9 +13,10 @@ use tokio::sync::oneshot;
 use tokio::sync::Mutex;
 use utilities::business_error;
 use utilities::error::BasicResult;
-use utilities::redis::derive::{FromRedisValue, ToRedisArgs};
+use utilities::redis::derive::{from_redis, to_redis};
 
-#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize, Debug)]
+#[from_redis]
+// #[to_redis]
 pub enum RoomChangeType {
     Add,
     Del,
@@ -31,10 +32,12 @@ impl Default for RoomChangeType {
 const CLIENT_MESSAGE_CHANNEL: &str = "client_message";
 const SYSTEM_MESSAGE_CHANNEL: &str = "system_message";
 
-#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize, Debug)]
+#[to_redis]
+#[from_redis]
 pub struct UpdateRooms(pub HashMap<String, HashMap<String, String>>);
 
-#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize, Debug, Default)]
+#[to_redis]
+#[from_redis]
 pub struct RoomChangeForHub {
     pub id: String,
     pub name: Option<String>,
@@ -42,20 +45,22 @@ pub struct RoomChangeForHub {
     pub r#type: RoomChangeType,
 }
 
-#[derive(FromRedisValue, Deserialize, Debug, Default)]
+#[from_redis]
 pub struct RoomChangeForHubResponse {
     pub status: i8,
     pub msg: String,
 }
 
-#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize, Debug)]
+#[from_redis]
+#[to_redis]
 pub struct ClientMessageForHub {
     pub room: String,
     pub id: String,
     pub content: String,
 }
 
-#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize, Debug)]
+#[from_redis]
+#[to_redis]
 pub struct SystemMessageForHub {
     pub room: String,
     pub to_id: String,
@@ -68,13 +73,14 @@ pub enum MessageForHub {
     System(SystemMessageForHub),
 }
 
-#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize)]
+#[from_redis]
+#[to_redis]
 pub struct RetrieveRroomsReq {
     r#type: RetrieveRroomsReqType,
     id: String,
 }
 
-#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize)]
+#[from_redis]
 pub enum RetrieveRroomsReqType {
     #[serde(rename = "get_by_room_id")]
     RoomID,
@@ -88,7 +94,8 @@ impl RetrieveRroomsReq {
     }
 }
 
-#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize)]
+#[from_redis]
+#[to_redis]
 pub struct HubData {
     pub sessions: HashMap<String, String>,
     pub rooms: HashMap<String, HashMap<String, bool>>, // for json format and lua script
