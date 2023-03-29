@@ -269,6 +269,13 @@ pub async fn chat_ws(
     })
     .await;
 
+    notify(NotifyType::List {
+        chat_server: &chat_server,
+        session_id: &session_id,
+        session: &mut session,
+    })
+    .await;
+
     notify(NotifyType::JoinRoom {
         chat_server: &chat_server,
         session_id: &session_id,
