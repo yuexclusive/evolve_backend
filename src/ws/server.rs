@@ -221,14 +221,11 @@ where
             }
 
             for room in res.iter() {
-                if rooms
-                    .get(room)
-                    .ok_or(business_error!("can not find room"))?
-                    .len()
-                    == 0
-                {
-                    rooms.remove(room);
-                    self.hub.close_channel(room).await?;
+                if let Some(hs) = rooms.get(room) {
+                    if hs.is_empty() {
+                        rooms.remove(room);
+                        self.hub.close_channel(room).await?;
+                    }
                 }
             }
         }
@@ -299,7 +296,7 @@ where
                 r#type: RoomChangeType::Del,
             })
             .await?;
-        
+
         Ok(())
     }
 
