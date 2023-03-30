@@ -18,7 +18,7 @@ use tokio::{
 };
 
 use super::hub::{RetrieveRroomsReq, UpdateRooms};
-use utilities::{business_error, error::BasicResult};
+use utilities::error::BasicResult;
 
 // use crate::{SessionID, Msg, RoomId};
 
