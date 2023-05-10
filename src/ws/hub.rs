@@ -169,20 +169,20 @@ impl Hub for RedisHub {
         self.message_rx.clone()
     }
     async fn publish_client_msg(&self, message: ClientMessageForHub) -> BasicResult<()> {
-        let res = utilities::redis::sync::publish(
+        let res = utilities::redis::publish(
             format!("{}_{}", message.room.clone(), CLIENT_MESSAGE_CHANNEL),
             message,
         )
-        .unwrap();
+        .await?;
         Ok(res)
     }
 
     async fn publish_system_msg(&self, message: SystemMessageForHub) -> BasicResult<()> {
-        let res = utilities::redis::sync::publish(
+        let res = utilities::redis::publish(
             format!("{}_{}", message.room.clone(), SYSTEM_MESSAGE_CHANNEL),
             message,
         )
-        .unwrap();
+        .await?;
         Ok(res)
     }
 

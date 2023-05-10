@@ -25,34 +25,40 @@ pub async fn ping() -> &'static str {
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // dotenv().ok();
+    // get config
+    let cfg = &config::CONFIG;
+    // init log
     log4rs::init_file("log4rs.yml", Default::default())?;
 
+    // init pg
     utilities::pg::init();
 
-    log::info!("DATABASE_URL: {}", std::env!("DATABASE_URL"));
-
-    let cfg = &config::CONFIG;
-
-    let email_cfg = &cfg.email;
-    utilities::email::init(
-        &email_cfg.username,
-        &email_cfg.password,
-        &email_cfg.relay,
-        email_cfg.port,
-    );
-    let meilisearch_cfg = &cfg.meilisearch;
-    utilities::meilisearch::init(&meilisearch_cfg.address, &meilisearch_cfg.api_key);
-
+    // init redis
     let redis_cfg = &cfg.redis;
     utilities::redis::init(
         &redis_cfg.host,
         redis_cfg.port,
         redis_cfg.username.clone(),
         redis_cfg.password.clone(),
-    );
+    )
+    .await;
 
-    user_service::reload_search().await?;
+    // init meilisearch
+    let meilisearch_cfg = &cfg.meilisearch;
+    utilities::meilisearch::init(&meilisearch_cfg.address, &meilisearch_cfg.api_key).await;
+
+    // init email
+    let email_cfg = &cfg.email;
+    utilities::email::init(
+        &email_cfg.username,
+        &email_cfg.password,
+        &email_cfg.relay,
+        email_cfg.port,
+    )
+    .await;
+
+    // load user search data
+    user_service::load_search().await?;
 
     #[cfg(feature = "ws")]
     let (hub, server_tx, rooms);
@@ -60,15 +66,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     {
         use ws::hub;
         use ws::server::ChatServer;
-        log::info!(
-            "room change script sha: {}",
-            dao::redis::lua_script::ROOMS_CHANGE.get().await.as_str()
-        );
+        // log::info!(
+        //     "room change script sha: {}",
+        //     dao::redis::lua_script::ROOMS_CHANGE.get().await.as_str()
+        // );
 
-        log::info!(
-            "room retrieve script sha: {}",
-            dao::redis::lua_script::ROOMS_RETRIEVE.get().await.as_str()
-        );
+        // log::info!(
+        //     "room retrieve script sha: {}",
+        //     dao::redis::lua_script::ROOMS_RETRIEVE.get().await.as_str()
+        // );
 
         hub = hub::RedisHub::new().await; // redis hub for distribution
         let chat_server; // chat server for local machine
@@ -76,7 +82,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         tokio::spawn(chat_server.run());
     }
 
-    log::info!("✅success");
     log::info!("📡server listening at {}:{}", cfg.host, cfg.port);
 
     HttpServer::new(move || {

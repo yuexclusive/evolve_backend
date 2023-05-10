@@ -8,7 +8,7 @@ pub async fn search(
     key_word: &str,
     page: &Pagination,
 ) -> BasicResult<(Vec<user_model::SearchedUser>, usize)> {
-    let res = meilisearch_util::CONN
+    let res = meilisearch_util::client()
         .get_index(super::USER_LIST_INDEX)
         .await?
         .search()

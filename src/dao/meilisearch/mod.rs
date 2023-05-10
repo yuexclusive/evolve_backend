@@ -12,20 +12,21 @@ pub async fn reload<D>(index: &str, documents: &[D], primary_key: Option<&str>) 
 where
     D: Serialize,
 {
-    let client = &meilisearch_util::CONN;
+    meilisearch_util::client()
+        .index(index)
+        .delete_all_documents()
+        .await?;
 
-    client.index(index).delete_all_documents().await?;
-
-    client
+    meilisearch_util::client()
         .index(index)
         .add_documents(documents, primary_key)
         .await?
-        .wait_for_completion(&meilisearch_util::CONN, None, None)
+        .wait_for_completion(meilisearch_util::client(), None, None)
         .await?;
 
-    client
+    meilisearch_util::client()
         .index(index)
-        .set_settings(&Settings::new().with_sortable_attributes(["created_at","updated_at"]))
+        .set_settings(&Settings::new().with_sortable_attributes(["created_at", "updated_at"]))
         .await?;
 
     Ok(())
@@ -35,12 +36,11 @@ pub async fn update<D>(index: &str, documents: &[D], primary_key: Option<&str>) 
 where
     D: Serialize,
 {
-    let client = &meilisearch_util::CONN;
-    client
+    meilisearch_util::client()
         .index(index)
         .add_or_update(documents, primary_key)
         .await?
-        .wait_for_completion(&meilisearch_util::CONN, None, None)
+        .wait_for_completion(meilisearch_util::client(), None, None)
         .await?;
     Ok(())
 }
@@ -49,12 +49,11 @@ pub async fn delete<T>(index: &str, ids: &[T]) -> BasicResult<()>
 where
     T: Display + Serialize + std::fmt::Debug,
 {
-    let client = &meilisearch_util::CONN;
-    client
+    meilisearch_util::client()
         .index(index)
         .delete_documents(ids)
         .await?
-        .wait_for_completion(&meilisearch_util::CONN, None, None)
+        .wait_for_completion(meilisearch_util::client(), None, None)
         .await?;
 
     Ok(())

@@ -362,7 +362,7 @@ pub async fn get_current_user(email: &str) -> BasicResult<user_model::CurrentUse
     Ok(res)
 }
 
-pub async fn reload_search() -> BasicResult<()> {
+pub async fn load_search() -> BasicResult<()> {
     let data = get_all().await?;
     let documents = data
         .into_iter()

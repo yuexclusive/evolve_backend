@@ -1,6 +1,6 @@
 use utilities::response::Pagination;
 use chrono::{DateTime, Utc};
-use utilities::pg::{SqlResult, CONN};
+use utilities::pg::{SqlResult, conn};
 
 #[derive(Debug, Clone)]
 pub struct Role {
@@ -31,7 +31,7 @@ limit $1 offset $2
         p.take(),
         p.skip()
     )
-    .fetch_all(CONN.get().await)
+    .fetch_all(conn().await)
     .await
 }
 
@@ -51,7 +51,7 @@ where id = $1
             "#,
         id,
     )
-    .fetch_one(CONN.get().await)
+    .fetch_one(conn().await)
     .await
 }
 
@@ -73,7 +73,7 @@ deleted_at
         description,
         created_at
     )
-    .fetch_one(CONN.get().await)
+    .fetch_one(conn().await)
     .await?;
 
     Ok(res)
@@ -97,7 +97,7 @@ deleted_at
         updated_at,
         id
     )
-    .fetch_one(CONN.get().await)
+    .fetch_one(conn().await)
     .await
 }
 
@@ -108,7 +108,7 @@ pub async fn delete(ids: &[i64]) -> SqlResult<u64> {
         deleted_at,
         ids,
     )
-    .execute(CONN.get().await)
+    .execute(conn().await)
     .await?;
 
     Ok(res.rows_affected())
