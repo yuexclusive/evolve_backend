@@ -1,16 +1,9 @@
+use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::fs;
 
-use lazy_static::lazy_static;
+static mut CONFIG: OnceCell<Config> = OnceCell::new();
 
-lazy_static! {
-    pub static ref CONFIG: Config = {
-        let config_path = "config.toml";
-        let str = fs::read_to_string(config_path).unwrap();
-        let config: Config = toml::from_str(&str).unwrap();
-        config
-    };
-}
 #[derive(Deserialize, Serialize)]
 pub struct Redis {
     pub host: String,
@@ -43,12 +36,24 @@ pub struct Config {
     pub email: Email,
 }
 
+pub fn cfg() -> &'static Config {
+    let res = unsafe {
+        CONFIG.get_or_init(|| {
+            let config_path = "config.toml";
+            let str = fs::read_to_string(config_path).unwrap();
+            let config: Config = toml::from_str(&str).unwrap();
+            config
+        })
+    };
+    res
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn test_1() {
-        let name = &CONFIG.name;
+        let name = &cfg().name;
         assert_eq!("evolve_backend", name)
     }
 }

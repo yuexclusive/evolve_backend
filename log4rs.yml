@@ -27,14 +27,14 @@ appenders:
     kind: console
     encoder:
       # pattern: "{d(%F %T%.3f%Z)} - {h({l})} - {t} - {m}{n}"
-      pattern: "{d(%F %T%.3f%Z)} | {h({l})} | {f}:{L} — {m}{n}"
+      pattern: "{d(%F %T%.3f%Z)} | {h({l})} | {f}:{L} | {m}{n}"
 
   file:
     kind: rolling_file
     path: "log/log.txt"
     append: false
     encoder:
-      pattern: "{d(%F %T%.3f%Z)} | {h({l})} | {f}:{L} — {m}{n}"
+      pattern: "{d(%F %T%.3f%Z)} | {h({l})} | {f}:{L} | {m}{n}"
     policy:
       kind: compound # 默认值, 即使用所有 policy
       trigger: # 当文件超过10mb 时触发 rotate
@@ -73,13 +73,13 @@ root:
   level: info
   appenders:
     - stdout
-    - file
+    # - file
     # - json_file
 loggers:
   # Route log events sent to the "app" logger to the "file" appender,
   # and *not* the normal appenders installed at the root
   sqlx:
-    level: error
+    level: error # info
     appenders:
       - stdout
       - file

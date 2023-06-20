@@ -83,7 +83,6 @@ enum Command {
 
     SystemMessage {
         room: String,
-        to_id: SessionID,
         msg: Msg,
         res_tx: oneshot::Sender<()>,
     },
@@ -160,10 +159,14 @@ where
     }
 
     /// send_system_message
-    async fn send_system_message(&self, to_id: String, msg: impl Into<String>) {
+    async fn send_system_message(&self, room: String, msg: impl Into<String>) {
         let msg = msg.into();
-        if let Some(conn) = self.sessions.get(&to_id) {
-            conn.send(msg).unwrap()
+        if let Some(sessions) = self.rooms.lock().await.get(&room) {
+            for conn_id in sessions {
+                if let Some(tx) = self.sessions.get(conn_id) {
+                    tx.send(msg.clone()).unwrap()
+                }
+            }
         }
     }
 
@@ -385,20 +388,11 @@ where
                         let _ = res_tx.send(());
                     }
 
-                    Command::SystemMessage {
-                        room,
-                        to_id,
-                        msg,
-                        res_tx,
-                    } => {
+                    Command::SystemMessage { room, msg, res_tx } => {
                         // self.send_message(room, skip, msg).await;
                         // let _ = res_tx.send(());
                         self.hub
-                            .publish_system_msg(SystemMessageForHub {
-                                room,
-                                to_id,
-                                content: msg,
-                            })
+                            .publish_system_msg(SystemMessageForHub { room, content: msg })
                             .await
                             .unwrap();
 
@@ -409,14 +403,12 @@ where
                     MessageForHub::Client(ClientMessageForHub { room, id, content }) => {
                         self.send_message(room, Some(id), content).await
                     }
-                    MessageForHub::System(SystemMessageForHub {
-                        room: _,
-                        to_id,
-                        content,
-                    }) => self.send_system_message(to_id, content).await,
+                    MessageForHub::System(SystemMessageForHub { room, content }) => {
+                        self.send_system_message(room, content).await
+                    }
                 },
                 _ => {
-                    log::error!("server closed");
+                    log::warn!("server closed");
 
                     break 'outer;
                 }
@@ -558,14 +550,13 @@ impl ChatServerHandle {
         res_rx.await.unwrap();
     }
 
-    pub async fn send_system_message(&self, room: &str, to_id: &str, msg: impl Into<String>) {
+    pub async fn send_system_message(&self, room: &str, msg: impl Into<String>) {
         let (res_tx, res_rx) = oneshot::channel();
 
         // unwrap: chat server should not have been dropped
         self.cmd_tx
             .send(Command::SystemMessage {
                 room: room.to_string(),
-                to_id: to_id.to_string(),
                 msg: msg.into(),
                 res_tx,
             })

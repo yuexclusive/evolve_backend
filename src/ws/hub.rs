@@ -1,5 +1,3 @@
-#![cfg(feature = "ws")]
-
 use crate::dao::redis::lua_script;
 use async_trait::async_trait;
 use futures::StreamExt;
@@ -63,7 +61,6 @@ pub struct ClientMessageForHub {
 #[to_redis]
 pub struct SystemMessageForHub {
     pub room: String,
-    pub to_id: String,
     pub content: String,
 }
 

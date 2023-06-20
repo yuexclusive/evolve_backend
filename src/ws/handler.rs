@@ -1,4 +1,3 @@
-#![cfg(feature = "ws")]
 use std::time::{Duration, Instant};
 
 use actix_ws::Message;
@@ -148,26 +147,20 @@ async fn notify(ty: NotifyType<'_>) {
             session_id,
             room,
         } => {
-            let rooms = chat_server.get_rooms_by_room_id(room).await;
-            for (r, sessions) in rooms.0.iter() {
-                for (to_id, _) in sessions {
-                    chat_server
-                        .send_system_message(
-                            r,
-                            to_id,
-                            &format!(
-                                "{JOIN_ROOM_PRE}{}",
-                                serde_json::to_string(&RoomChange {
-                                    session_id,
-                                    room,
-                                    name
-                                })
-                                .unwrap()
-                            ),
-                        )
-                        .await;
-                }
-            }
+            chat_server
+                .send_system_message(
+                    room,
+                    &format!(
+                        "{JOIN_ROOM_PRE}{}",
+                        serde_json::to_string(&RoomChange {
+                            session_id,
+                            room,
+                            name
+                        })
+                        .unwrap()
+                    ),
+                )
+                .await;
         }
         NotifyType::QuitRoom {
             chat_server,
@@ -175,26 +168,20 @@ async fn notify(ty: NotifyType<'_>) {
             name,
             room,
         } => {
-            let rooms = chat_server.get_rooms_by_room_id(room).await;
-            for (r, sessions) in rooms.0.iter() {
-                for (to_id, _) in sessions {
-                    chat_server
-                        .send_system_message(
-                            r,
-                            to_id,
-                            &format!(
-                                "{QUIT_ROOM_PRE}{}",
-                                serde_json::to_string(&RoomChange {
-                                    session_id,
-                                    room,
-                                    name
-                                })
-                                .unwrap()
-                            ),
-                        )
-                        .await;
-                }
-            }
+            chat_server
+                .send_system_message(
+                    room,
+                    &format!(
+                        "{QUIT_ROOM_PRE}{}",
+                        serde_json::to_string(&RoomChange {
+                            session_id,
+                            room,
+                            name
+                        })
+                        .unwrap()
+                    ),
+                )
+                .await;
         }
         NotifyType::UpdateName {
             chat_server,
@@ -202,26 +189,20 @@ async fn notify(ty: NotifyType<'_>) {
             name,
             old_name,
         } => {
-            let rooms = chat_server.get_rooms_by_session_id(session_id).await;
-            for (r, sessions) in rooms.0.iter() {
-                for (to_id, _) in sessions {
-                    chat_server
-                        .send_system_message(
-                            r,
-                            to_id,
-                            &format!(
-                                "{UPDATE_NAME_PRE}{}",
-                                serde_json::to_string(&UpdateName {
-                                    session_id,
-                                    name,
-                                    old_name
-                                })
-                                .unwrap()
-                            ),
-                        )
-                        .await;
-                }
-            }
+            chat_server
+                .send_system_message(
+                    DEFAULT_ROOM,
+                    &format!(
+                        "{UPDATE_NAME_PRE}{}",
+                        serde_json::to_string(&UpdateName {
+                            session_id,
+                            name,
+                            old_name
+                        })
+                        .unwrap()
+                    ),
+                )
+                .await;
         }
         NotifyType::Message {
             chat_server,

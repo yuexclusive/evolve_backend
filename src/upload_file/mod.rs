@@ -1,3 +1,5 @@
+#![cfg(feature = "upload_file")]
+
 use std::io::Write;
 
 use actix_multipart::Multipart;
@@ -5,6 +7,17 @@ use actix_web::{get, post, web, HttpResponse, Responder, Result};
 use futures_util::TryStreamExt as _;
 use std::path::Path;
 use uuid::Uuid;
+
+#[macro_export]
+macro_rules! serve_upload_file {
+    ($app: expr) => {
+        $app = $app.service(
+            scope("/file")
+                .service(upload_file::upload_page)
+                .service(upload_file::upload),
+        );
+    };
+}
 
 #[get("/upload")]
 async fn upload_page() -> HttpResponse {

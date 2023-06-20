@@ -1,4 +1,3 @@
-#![cfg(feature = "openapi")]
 use crate::openapi::security::SecurityAddon;
 use utilities::response::MsgResponse;
 use utoipa::OpenApi;

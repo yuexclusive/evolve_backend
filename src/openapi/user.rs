@@ -1,7 +1,6 @@
-#![cfg(feature = "openapi")]
 use utoipa::OpenApi;
 use utilities::response::{MsgResponse,ErrorResponse};
-use crate::controller::user as user_controller;
+use crate::api::user as user_controller;
 use crate::model::user as user_model;
 use crate::openapi::security::SecurityAddon;
 
