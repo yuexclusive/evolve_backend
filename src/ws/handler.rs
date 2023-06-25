@@ -439,7 +439,7 @@ async fn process_text_msg(
                     notify(NotifyType::UpdateSession {
                         session: &mut session,
                         name: &name,
-                        room: &room,
+                        room: &r,
                     })
                     .await;
 
