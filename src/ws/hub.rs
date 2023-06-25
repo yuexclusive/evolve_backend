@@ -27,8 +27,7 @@ impl Default for RoomChangeType {
     }
 }
 
-const CLIENT_MESSAGE_CHANNEL: &str = "client_message";
-const SYSTEM_MESSAGE_CHANNEL: &str = "system_message";
+const MESSAGE_CHANNEL: &str = "message";
 
 #[to_redis]
 #[from_redis]
@@ -51,23 +50,11 @@ pub struct RoomChangeForHubResponse {
 
 #[from_redis]
 #[to_redis]
-pub struct ClientMessageForHub {
+#[derive(Debug)]
+pub struct MessageForHub {
     pub room: String,
     pub id: String,
     pub content: String,
-}
-
-#[from_redis]
-#[to_redis]
-pub struct SystemMessageForHub {
-    pub room: String,
-    pub content: String,
-}
-
-#[derive(Debug)]
-pub enum MessageForHub {
-    Client(ClientMessageForHub),
-    System(SystemMessageForHub),
 }
 
 #[from_redis]
@@ -104,8 +91,7 @@ pub trait Hub {
     async fn get_msssage_rx(&self) -> Arc<Mutex<UnboundedReceiver<MessageForHub>>>;
     async fn open_channel(&self, room: &str) -> BasicResult<()>;
     async fn close_channel(&self, room: &str) -> BasicResult<()>;
-    async fn publish_client_msg(&self, message: ClientMessageForHub) -> BasicResult<()>;
-    async fn publish_system_msg(&self, message: SystemMessageForHub) -> BasicResult<()>;
+    async fn publish(&self, message: MessageForHub) -> BasicResult<()>;
     async fn clean(&self, rooms: Arc<Mutex<HashMap<String, HashSet<String>>>>) -> BasicResult<()>;
     async fn change_rooms(&self, change: RoomChangeForHub) -> BasicResult<()>;
     async fn retrieve_rooms(&self, req: RetrieveRroomsReq) -> BasicResult<UpdateRooms>;
@@ -121,23 +107,17 @@ impl RedisHub {
         room: &str,
         msg_tx: UnboundedSender<MessageForHub>,
     ) -> BasicResult<(UnboundedSender<bool>, oneshot::Receiver<bool>)> {
-        let mut system_msg_subscribe =
-            utilities::redis::subscribe(&format!("{}_{}", room, SYSTEM_MESSAGE_CHANNEL)).await?;
-        let mut client_msg_subscribe =
-            utilities::redis::subscribe(&format!("{}_{}", room, CLIENT_MESSAGE_CHANNEL)).await?;
+        let mut msg_subscribe =
+            utilities::redis::subscribe(&format!("{}_{}", room, MESSAGE_CHANNEL)).await?;
         // let (msg_tx, msg_rx) = mpsc::unbounded_channel();
         let (close_tx, mut close_rx) = mpsc::unbounded_channel::<bool>();
         let (close_done_tx, close_done_rx) = oneshot::channel();
         tokio::spawn(async move {
             'l: loop {
                 tokio::select! {
-                   Some(msg) = client_msg_subscribe.next()=>{
-                    let payload = msg.get_payload::<ClientMessageForHub>().unwrap();
-                    msg_tx.send(MessageForHub::Client(payload)).unwrap();
-                   }
-                   Some(msg) = system_msg_subscribe.next()=>{
-                    let payload = msg.get_payload::<SystemMessageForHub>().unwrap();
-                    msg_tx.send(MessageForHub::System(payload)).unwrap();
+                   Some(msg) = msg_subscribe.next()=>{
+                    let payload = msg.get_payload::<MessageForHub>().unwrap();
+                    msg_tx.send(payload).unwrap();
                    }
                    Some(v)= close_rx.recv()=>{
                      close_done_tx.send(v).unwrap();
@@ -165,18 +145,9 @@ impl Hub for RedisHub {
     async fn get_msssage_rx(&self) -> Arc<Mutex<UnboundedReceiver<MessageForHub>>> {
         self.message_rx.clone()
     }
-    async fn publish_client_msg(&self, message: ClientMessageForHub) -> BasicResult<()> {
+    async fn publish(&self, message: MessageForHub) -> BasicResult<()> {
         let res = utilities::redis::publish(
-            format!("{}_{}", message.room.clone(), CLIENT_MESSAGE_CHANNEL),
-            message,
-        )
-        .await?;
-        Ok(res)
-    }
-
-    async fn publish_system_msg(&self, message: SystemMessageForHub) -> BasicResult<()> {
-        let res = utilities::redis::publish(
-            format!("{}_{}", message.room.clone(), SYSTEM_MESSAGE_CHANNEL),
+            format!("{}_{}", message.room.clone(), MESSAGE_CHANNEL),
             message,
         )
         .await?;

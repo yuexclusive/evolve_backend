@@ -33,11 +33,13 @@ pub enum NotifyType<'a> {
 
     JoinRoom {
         chat_server: &'a ChatServerHandle,
+        session: &'a mut actix_ws::Session,
         session_id: &'a str,
         name: &'a str,
         room: &'a str,
     },
     QuitRoom {
+        session: &'a mut actix_ws::Session,
         chat_server: &'a ChatServerHandle,
         session_id: &'a str,
         name: &'a str,
@@ -144,12 +146,14 @@ async fn notify(ty: NotifyType<'_>) {
         NotifyType::JoinRoom {
             chat_server,
             name,
+            session,
             session_id,
             room,
         } => {
             chat_server
-                .send_system_message(
-                    room,
+                .send_message(
+                    room.to_string(),
+                    session_id.to_string(),
                     &format!(
                         "{JOIN_ROOM_PRE}{}",
                         serde_json::to_string(&RoomChange {
@@ -161,16 +165,31 @@ async fn notify(ty: NotifyType<'_>) {
                     ),
                 )
                 .await;
+
+            session
+                .text(format!(
+                    "{JOIN_ROOM_PRE}{}",
+                    serde_json::to_string(&RoomChange {
+                        session_id,
+                        room,
+                        name
+                    })
+                    .unwrap()
+                ))
+                .await
+                .unwrap();
         }
         NotifyType::QuitRoom {
             chat_server,
+            session,
             session_id,
             name,
             room,
         } => {
             chat_server
-                .send_system_message(
-                    room,
+                .send_message(
+                    room.to_string(),
+                    session_id.to_string(),
                     &format!(
                         "{QUIT_ROOM_PRE}{}",
                         serde_json::to_string(&RoomChange {
@@ -182,6 +201,19 @@ async fn notify(ty: NotifyType<'_>) {
                     ),
                 )
                 .await;
+
+            session
+                .text(format!(
+                    "{QUIT_ROOM_PRE}{}",
+                    serde_json::to_string(&RoomChange {
+                        session_id,
+                        room,
+                        name
+                    })
+                    .unwrap()
+                ))
+                .await
+                .unwrap();
         }
         NotifyType::UpdateName {
             chat_server,
@@ -190,8 +222,9 @@ async fn notify(ty: NotifyType<'_>) {
             old_name,
         } => {
             chat_server
-                .send_system_message(
-                    DEFAULT_ROOM,
+                .send_message(
+                    DEFAULT_ROOM.to_string(),
+                    session_id.to_string(),
                     &format!(
                         "{UPDATE_NAME_PRE}{}",
                         serde_json::to_string(&UpdateName {
@@ -260,6 +293,7 @@ pub async fn chat_ws(
     notify(NotifyType::JoinRoom {
         chat_server: &chat_server,
         session_id: &session_id,
+        session: &mut session,
         name: &name,
         room: &DEFAULT_ROOM,
     })
@@ -358,6 +392,7 @@ pub async fn chat_ws(
 
     for room in rooms {
         notify(NotifyType::QuitRoom {
+            session: &mut session,
             chat_server: &chat_server,
             session_id: &session_id,
             name: &name,
@@ -411,6 +446,7 @@ async fn process_text_msg(
                     notify(NotifyType::JoinRoom {
                         chat_server: &chat_server,
                         session_id: &session_id,
+                        session: &mut session,
                         name: &name,
                         room: &room,
                     })
@@ -431,12 +467,14 @@ async fn process_text_msg(
                             .unwrap();
                         return;
                     }
+                    log::info!("session_id: {},room: {}", session_id, r);
 
                     notify(NotifyType::QuitRoom {
+                        session: &mut session,
                         chat_server: &chat_server,
                         session_id: &session_id,
                         name: &name,
-                        room: &room,
+                        room: &r,
                     })
                     .await;
 

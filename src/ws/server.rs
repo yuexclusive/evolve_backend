@@ -1,7 +1,6 @@
 #![cfg(feature = "ws")]
 use crate::ws::hub::{
-    self, ClientMessageForHub, MessageForHub, RetrieveRroomsReqType, RoomChangeForHub,
-    RoomChangeType, SystemMessageForHub,
+    self, MessageForHub, RetrieveRroomsReqType, RoomChangeForHub, RoomChangeType,
 };
 use futures_util::future::{select, Either};
 use std::{
@@ -80,12 +79,6 @@ enum Command {
         msg: Msg,
         res_tx: oneshot::Sender<()>,
     },
-
-    SystemMessage {
-        room: String,
-        msg: Msg,
-        res_tx: oneshot::Sender<()>,
-    },
 }
 
 /// A multi-room chat server.
@@ -159,12 +152,21 @@ where
     }
 
     /// send_system_message
-    async fn send_system_message(&self, room: String, msg: impl Into<String>) {
+    async fn send_system_message(
+        &self,
+        room: String,
+        skip: Option<SessionID>,
+        msg: impl Into<String>,
+    ) {
         let msg = msg.into();
         if let Some(sessions) = self.rooms.lock().await.get(&room) {
             for conn_id in sessions {
-                if let Some(tx) = self.sessions.get(conn_id) {
-                    tx.send(msg.clone()).unwrap()
+                if let Some(skip) = &skip {
+                    if conn_id != skip {
+                        if let Some(tx) = self.sessions.get(conn_id) {
+                            tx.send(msg.clone()).unwrap()
+                        }
+                    }
                 }
             }
         }
@@ -377,7 +379,7 @@ where
                         // self.send_message(room, skip, msg).await;
                         // let _ = res_tx.send(());
                         self.hub
-                            .publish_client_msg(ClientMessageForHub {
+                            .publish(MessageForHub {
                                 room,
                                 id,
                                 content: msg,
@@ -387,24 +389,10 @@ where
 
                         let _ = res_tx.send(());
                     }
-
-                    Command::SystemMessage { room, msg, res_tx } => {
-                        // self.send_message(room, skip, msg).await;
-                        // let _ = res_tx.send(());
-                        self.hub
-                            .publish_system_msg(SystemMessageForHub { room, content: msg })
-                            .await
-                            .unwrap();
-
-                        let _ = res_tx.send(());
-                    }
                 },
                 Either::Right((Some(msg), _)) => match msg {
-                    MessageForHub::Client(ClientMessageForHub { room, id, content }) => {
+                    MessageForHub { room, id, content } => {
                         self.send_message(room, Some(id), content).await
-                    }
-                    MessageForHub::System(SystemMessageForHub { room, content }) => {
-                        self.send_system_message(room, content).await
                     }
                 },
                 _ => {
@@ -541,22 +529,6 @@ impl ChatServerHandle {
             .send(Command::Message {
                 id: conn,
                 room: room,
-                msg: msg.into(),
-                res_tx,
-            })
-            .unwrap();
-
-        // unwrap: chat server does not drop our response channel
-        res_rx.await.unwrap();
-    }
-
-    pub async fn send_system_message(&self, room: &str, msg: impl Into<String>) {
-        let (res_tx, res_rx) = oneshot::channel();
-
-        // unwrap: chat server should not have been dropped
-        self.cmd_tx
-            .send(Command::SystemMessage {
-                room: room.to_string(),
                 msg: msg.into(),
                 res_tx,
             })
