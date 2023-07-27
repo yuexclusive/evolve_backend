@@ -1,3 +1,4 @@
+#![feature(async_fn_in_trait)]
 #![allow(dead_code)]
 
 mod api;

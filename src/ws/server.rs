@@ -1,6 +1,6 @@
 #![cfg(feature = "ws")]
 use crate::ws::hub::{
-    self, MessageForHub, RetrieveRroomsReqType, RoomChangeForHub, RoomChangeType,
+    self, MessageForHub, RetrieveRroomsReqType, ChangeRoomReq, RoomChangeType,
 };
 use futures_util::future::{select, Either};
 use std::{
@@ -170,7 +170,7 @@ where
         id: String,
         name: String,
     ) -> BasicResult<SessionID> {
-        self.hub.open_channel(DEFAULT_ROOM).await?;
+        self.hub.subscribe_room(DEFAULT_ROOM).await?;
 
         // register session with random connection IDF
         self.sessions.insert(id.clone(), tx);
@@ -184,7 +184,7 @@ where
             .insert(id.clone());
 
         self.hub
-            .change_rooms(RoomChangeForHub {
+            .change_rooms(ChangeRoomReq {
                 id: id.clone(),
                 name: Some(name),
                 room: DEFAULT_ROOM.to_string(),
@@ -204,7 +204,7 @@ where
             for (room, sessions) in rooms.iter_mut() {
                 if sessions.remove(&conn_id) {
                     self.hub
-                        .change_rooms(RoomChangeForHub {
+                        .change_rooms(ChangeRoomReq {
                             id: conn_id.clone(),
                             name: None,
                             room: room.clone(),
@@ -220,7 +220,7 @@ where
                 if let Some(hs) = rooms.get(room) {
                     if hs.is_empty() {
                         rooms.remove(room);
-                        self.hub.close_channel(room).await?;
+                        self.hub.unsubscribe_room(room).await?;
                     }
                 }
             }
@@ -255,7 +255,7 @@ where
 
     /// Join room, send disconnect message to old room send join message to new room.
     async fn join_room(&mut self, session_id: SessionID, room: String) -> BasicResult<()> {
-        self.hub.open_channel(&room).await?;
+        self.hub.subscribe_room(&room).await?;
 
         self.rooms
             .lock()
@@ -265,7 +265,7 @@ where
             .insert(session_id.clone());
 
         self.hub
-            .change_rooms(RoomChangeForHub {
+            .change_rooms(ChangeRoomReq {
                 id: session_id.clone(),
                 name: None,
                 room: room.clone(),
@@ -279,13 +279,13 @@ where
         if let Some(v) = self.rooms.lock().await.get_mut(&room) {
             if v.remove(&session_id) {
                 if v.len() == 0 {
-                    self.hub.close_channel(&room).await?;
+                    self.hub.unsubscribe_room(&room).await?;
                 }
             }
         }
 
         self.hub
-            .change_rooms(RoomChangeForHub {
+            .change_rooms(ChangeRoomReq {
                 id: session_id.clone(),
                 name: None,
                 room: room.clone(),
@@ -298,7 +298,7 @@ where
 
     async fn change_name(&mut self, session_id: SessionID, name: String) {
         self.hub
-            .change_rooms(RoomChangeForHub {
+            .change_rooms(ChangeRoomReq {
                 id: session_id.clone(),
                 name: Some(name),
                 room: "".to_string(),

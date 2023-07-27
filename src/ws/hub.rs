@@ -1,5 +1,4 @@
 use crate::dao::redis::lua_script;
-use async_trait::async_trait;
 use futures::StreamExt;
 use redis::aio::ConnectionLike;
 use redis::FromRedisValue;
@@ -35,7 +34,7 @@ pub struct UpdateRooms(pub HashMap<String, HashMap<String, String>>);
 
 #[to_redis]
 #[from_redis]
-pub struct RoomChangeForHub {
+pub struct ChangeRoomReq {
     pub id: String,
     pub name: Option<String>,
     pub room: String,
@@ -78,21 +77,12 @@ impl RetrieveRroomsReq {
     }
 }
 
-#[from_redis]
-#[to_redis]
-pub struct HubData {
-    pub sessions: HashMap<String, String>,
-    pub rooms: HashMap<String, HashMap<String, bool>>, // for json format and lua script
-    pub session_room_map: HashMap<String, HashMap<String, bool>>, // for json format and lua script
-}
-
-#[async_trait]
 pub trait Hub {
-    async fn open_channel(&self, room: &str) -> BasicResult<()>;
-    async fn close_channel(&self, room: &str) -> BasicResult<()>;
+    async fn subscribe_room(&self, room: &str) -> BasicResult<()>;
+    async fn unsubscribe_room(&self, room: &str) -> BasicResult<()>;
     async fn publish(&self, message: MessageForHub) -> BasicResult<()>;
     async fn clean(&self, rooms: &HashMap<String, HashSet<String>>) -> BasicResult<()>;
-    async fn change_rooms(&self, change: RoomChangeForHub) -> BasicResult<()>;
+    async fn change_rooms(&self, req: ChangeRoomReq) -> BasicResult<()>;
     async fn retrieve_rooms(&self, req: RetrieveRroomsReq) -> BasicResult<UpdateRooms>;
 }
 
@@ -139,7 +129,6 @@ impl RedisHub {
     }
 }
 
-#[async_trait]
 impl Hub for RedisHub {
     async fn publish(&self, message: MessageForHub) -> BasicResult<()> {
         let res = utilities::redis::publish(
@@ -150,7 +139,7 @@ impl Hub for RedisHub {
         Ok(res)
     }
 
-    async fn change_rooms(&self, change: RoomChangeForHub) -> BasicResult<()> {
+    async fn change_rooms(&self, change: ChangeRoomReq) -> BasicResult<()> {
         // let input = serde_json::to_string(&change).unwrap();
         let mut cmd = redis::cmd("evalsha");
 
@@ -191,7 +180,7 @@ impl Hub for RedisHub {
     async fn clean(&self, rooms: &HashMap<String, HashSet<String>>) -> BasicResult<()> {
         for (room, sessions) in rooms.iter() {
             for id in sessions {
-                self.change_rooms(RoomChangeForHub {
+                self.change_rooms(ChangeRoomReq {
                     id: id.to_string(),
                     room: room.to_string(),
                     name: None,
@@ -204,7 +193,7 @@ impl Hub for RedisHub {
         Ok(())
     }
 
-    async fn open_channel(&self, room: &str) -> BasicResult<()> {
+    async fn subscribe_room(&self, room: &str) -> BasicResult<()> {
         let mut channels = self.channels.lock().await;
         if !channels.contains_key(room) {
             let (close, close_done) = Self::subscribe(&room, self.message_tx.clone()).await?;
@@ -213,7 +202,7 @@ impl Hub for RedisHub {
         Ok(())
     }
 
-    async fn close_channel(&self, room: &str) -> BasicResult<()> {
+    async fn unsubscribe_room(&self, room: &str) -> BasicResult<()> {
         let mut channels = self.channels.lock().await;
         if let Some((close, close_done)) = channels.remove(room) {
             close.send(true).unwrap();

@@ -35,7 +35,7 @@ openssl = {version = "0", features = ["v110", "vendored"]}
 rand = "0"
 redis = {version = "0", features = ["tokio-comp"]}
 # redis_encoding_derive = {path = "./redis_encoding_derive"}
-async-trait = "0"
+# async-trait = "0"
 # chan = "0"
 # chan-signal = "0"
 regex = "1"
