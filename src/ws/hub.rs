@@ -88,18 +88,16 @@ pub struct HubData {
 
 #[async_trait]
 pub trait Hub {
-    async fn get_msssage_rx(&self) -> Arc<Mutex<UnboundedReceiver<MessageForHub>>>;
     async fn open_channel(&self, room: &str) -> BasicResult<()>;
     async fn close_channel(&self, room: &str) -> BasicResult<()>;
     async fn publish(&self, message: MessageForHub) -> BasicResult<()>;
-    async fn clean(&self, rooms: Arc<Mutex<HashMap<String, HashSet<String>>>>) -> BasicResult<()>;
+    async fn clean(&self, rooms: &HashMap<String, HashSet<String>>) -> BasicResult<()>;
     async fn change_rooms(&self, change: RoomChangeForHub) -> BasicResult<()>;
     async fn retrieve_rooms(&self, req: RetrieveRroomsReq) -> BasicResult<UpdateRooms>;
 }
 
 pub struct RedisHub {
     message_tx: UnboundedSender<MessageForHub>,
-    message_rx: Arc<Mutex<UnboundedReceiver<MessageForHub>>>,
     channels: Arc<Mutex<HashMap<String, (UnboundedSender<bool>, oneshot::Receiver<bool>)>>>,
 }
 impl RedisHub {
@@ -109,7 +107,6 @@ impl RedisHub {
     ) -> BasicResult<(UnboundedSender<bool>, oneshot::Receiver<bool>)> {
         let mut msg_subscribe =
             utilities::redis::subscribe(&format!("{}_{}", room, MESSAGE_CHANNEL)).await?;
-        // let (msg_tx, msg_rx) = mpsc::unbounded_channel();
         let (close_tx, mut close_rx) = mpsc::unbounded_channel::<bool>();
         let (close_done_tx, close_done_rx) = oneshot::channel();
         tokio::spawn(async move {
@@ -130,21 +127,20 @@ impl RedisHub {
         Ok((close_tx, close_done_rx))
     }
 
-    pub async fn new() -> Arc<Self> {
+    pub fn new() -> (Self, UnboundedReceiver<MessageForHub>) {
         let (msg_tx, msg_rx) = mpsc::unbounded_channel();
-        Arc::new(Self {
-            message_rx: Arc::new(Mutex::new(msg_rx)),
-            message_tx: msg_tx,
-            channels: Default::default(),
-        })
+        (
+            Self {
+                message_tx: msg_tx,
+                channels: Default::default(),
+            },
+            msg_rx,
+        )
     }
 }
 
 #[async_trait]
 impl Hub for RedisHub {
-    async fn get_msssage_rx(&self) -> Arc<Mutex<UnboundedReceiver<MessageForHub>>> {
-        self.message_rx.clone()
-    }
     async fn publish(&self, message: MessageForHub) -> BasicResult<()> {
         let res = utilities::redis::publish(
             format!("{}_{}", message.room.clone(), MESSAGE_CHANNEL),
@@ -192,8 +188,8 @@ impl Hub for RedisHub {
         Ok(data)
     }
 
-    async fn clean(&self, rooms: Arc<Mutex<HashMap<String, HashSet<String>>>>) -> BasicResult<()> {
-        for (room, sessions) in rooms.lock().await.iter() {
+    async fn clean(&self, rooms: &HashMap<String, HashSet<String>>) -> BasicResult<()> {
+        for (room, sessions) in rooms.iter() {
             for id in sessions {
                 self.change_rooms(RoomChangeForHub {
                     id: id.to_string(),

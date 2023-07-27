@@ -1,8 +1,8 @@
 #![cfg(feature = "ws")]
 
-use crate::session;
-use crate::ws::handler;
+use crate::session as user_session;
 use crate::ws::server::ChatServerHandle;
+use crate::ws::session as ws_session;
 use actix_files::NamedFile;
 use actix_web::{
     get,
@@ -25,11 +25,11 @@ async fn connect(
 ) -> Result<impl Responder> {
     let (res, session, msg_stream) = actix_ws::handle(&req, stream)?;
     let token = token.to_string();
-    let user = session::get_current_user_by_token(&token).await?;
+    let user = user_session::get_current_user_by_token(&token).await?;
     let id = user.email;
     let name = user.name.unwrap_or(id.clone());
-    // spawn websocket handler (and don't await it) so that the response is returned immediately
-    spawn_local(handler::chat_ws(
+    
+    spawn_local(ws_session::chat_ws(
         id,
         name,
         (**chat_server).clone(),

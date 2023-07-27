@@ -26,8 +26,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     init::init().await?;
 
     #[cfg(feature = "ws")]
-    let (hub, server_tx, rooms) = init_ws!();
-
+    let cmd_tx = init_ws!();
+    #[cfg(feature = "ws")]
+    let cmd_tx_for_req = cmd_tx.clone();
     HttpServer::new(move || {
         let mut app = App::new()
             .wrap(middleware::logger::logger())
@@ -37,7 +38,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         #[cfg(feature = "openapi")]
         serve_openapi!(app);
         #[cfg(feature = "ws")]
-        serve_ws!(app, server_tx);
+        serve_ws!(app, cmd_tx_for_req);
         #[cfg(feature = "static_file")]
         serve_static_file!(app);
         #[cfg(feature = "upload_file")]
@@ -50,7 +51,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .unwrap();
 
     #[cfg(feature = "ws")]
-    clean_ws!(hub, rooms);
+    cmd_tx.close().await;
+
     log::info!("server stoped");
     Ok(())
 }

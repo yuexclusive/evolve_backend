@@ -32,7 +32,7 @@ pub type Msg = String;
 
 /// A command received by the [`ChatServer`].
 #[derive(Debug)]
-enum Command {
+pub enum Command {
     Connect {
         conn_tx: mpsc::UnboundedSender<Msg>,
         res_tx: oneshot::Sender<SessionID>,
@@ -79,6 +79,9 @@ enum Command {
         msg: Msg,
         res_tx: oneshot::Sender<()>,
     },
+    Close {
+        res_tx: oneshot::Sender<()>,
+    },
 }
 
 /// A multi-room chat server.
@@ -97,12 +100,8 @@ where
     /// Map of room name to participant IDs in that room.
     rooms: Arc<Mutex<HashMap<RoomID, HashSet<SessionID>>>>,
 
-    // /// Tracks total number of historical connections established.
-    // visitor_count: Arc<AtomicUsize>,
-    /// Command receiver.
-    cmd_rx: Arc<Mutex<UnboundedReceiver<Command>>>,
-
-    hub: Arc<H>,
+    /// hub
+    hub: H,
 }
 
 pub const DEFAULT_ROOM: &str = "main";
@@ -111,13 +110,7 @@ impl<H> ChatServer<H>
 where
     H: hub::Hub,
 {
-    pub fn new(
-        hub: Arc<H>,
-    ) -> (
-        Self,
-        ChatServerHandle,
-        Arc<Mutex<HashMap<RoomID, HashSet<SessionID>>>>,
-    ) {
+    pub fn new(hub: H) -> (Self, ChatServerHandle, UnboundedReceiver<Command>) {
         let rooms = Arc::new(Mutex::new(HashMap::<RoomID, HashSet<SessionID>>::new()));
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
         (
@@ -125,11 +118,9 @@ where
                 sessions: HashMap::new(),
                 rooms: rooms.clone(),
                 hub: hub,
-                // visitor_count: Arc::new(AtomicUsize::new(0)),
-                cmd_rx: Arc::new(Mutex::new(cmd_rx)),
             },
             ChatServerHandle { cmd_tx },
-            rooms,
+            cmd_rx,
         )
     }
 
@@ -317,15 +308,17 @@ where
             .unwrap();
     }
 
-    pub async fn run(mut self) -> io::Result<()> {
+    pub async fn run(
+        mut self,
+        mut hub_rx: UnboundedReceiver<MessageForHub>,
+        mut cmd_rx: UnboundedReceiver<Command>,
+    ) -> io::Result<()> {
+        let hub_rx = &mut hub_rx;
+        let cmd_rx = &mut cmd_rx;
         'outer: loop {
-            let cmd_rx = self.cmd_rx.clone();
-            let mut cmd_rx = cmd_rx.lock().await;
             let cmd_rx = cmd_rx.recv();
             pin!(cmd_rx);
 
-            let hub_rx = self.hub.get_msssage_rx().await.clone();
-            let mut hub_rx = hub_rx.lock().await;
             let hub_rx = hub_rx.recv();
             pin!(hub_rx);
 
@@ -389,6 +382,12 @@ where
 
                         let _ = res_tx.send(());
                     }
+                    Command::Close { res_tx } => {
+                        let rooms = &*self.rooms.lock().await;
+                        self.hub.clean(rooms).await.unwrap();
+                        let _ = res_tx.send(());
+                        break 'outer;
+                    }
                 },
                 Either::Right((Some(msg), _)) => match msg {
                     MessageForHub { room, id, content } => {
@@ -397,12 +396,10 @@ where
                 },
                 _ => {
                     log::warn!("server closed");
-
                     break 'outer;
                 }
             }
         }
-
         Ok(())
     }
 }
@@ -550,5 +547,14 @@ impl ChatServerHandle {
             .unwrap();
 
         res_rx.await.unwrap()
+    }
+
+    // close server
+    pub async fn close(&self) {
+        let (res_tx, res_rx) = oneshot::channel();
+        // unwrap: chat server should not have been dropped
+        self.cmd_tx.send(Command::Close { res_tx }).unwrap();
+        res_rx.await.unwrap();
+        log::info!("ws server stoped");
     }
 }

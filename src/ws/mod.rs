@@ -1,9 +1,9 @@
 #![cfg(feature = "ws")]
 
-pub mod handler;
+pub mod api;
+pub mod session;
 pub mod hub;
 pub mod server;
-pub mod api;
 
 /// init websocket
 ///
@@ -17,21 +17,22 @@ macro_rules! init_ws {
     () => {{
         use ws::hub;
         use ws::server::ChatServer;
-        let hub = hub::RedisHub::new().await; // redis hub for distribution
-        let (chat_server, server_tx, rooms) = ChatServer::new(hub.clone());
-        tokio::spawn(chat_server.run());
+        let (hub, hub_rx) = hub::RedisHub::new(); // redis hub for distribution
+        let (chat_server, cmd_tx, cmd_rx) = ChatServer::new(hub);
+        tokio::spawn(chat_server.run(hub_rx, cmd_rx));
         log::info!("ws inited");
-        (hub, server_tx, rooms)
+        cmd_tx
     }};
 }
 
 #[macro_export]
 macro_rules! serve_ws {
-    ($app: expr, $server_tx:expr) => {
+    ($app: expr, $cmd_tx:expr) => {
         use actix_web::web;
+        let cmd_tx = $cmd_tx.clone();
         $app = $app.service(
             scope("/ws")
-                .app_data(web::Data::new($server_tx.clone()))
+                .app_data(web::Data::new(cmd_tx))
                 .service(ws::api::index)
                 .service(ws::api::connect),
         );
@@ -39,11 +40,11 @@ macro_rules! serve_ws {
     };
 }
 
-#[macro_export]
-macro_rules! clean_ws {
-    ($hub:expr,$rooms:expr) => {
-        use ws::hub::Hub;
-        $hub.clean($rooms).await?;
-        log::info!("ws cleaned")
-    };
-}
+// #[macro_export]
+// macro_rules! clean_ws {
+//     ($hub:expr,$rooms:expr) => {
+//         use ws::hub::Hub;
+//         $hub.clean($rooms).await?;
+//         log::info!("ws cleaned")
+//     };
+// }
