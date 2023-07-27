@@ -1,6 +1,6 @@
 use utilities::response::Pagination;
 use chrono::{DateTime, Utc};
-use utilities::pg::{SqlResult, conn};
+use utilities::postgres::{SqlResult, conn};
 
 #[derive(Debug, Clone)]
 pub struct Role {

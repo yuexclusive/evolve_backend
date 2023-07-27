@@ -4,7 +4,7 @@ use utilities::datetime::FormatDateTime;
 use utilities::error::BasicResult;
 use utilities::response::Pagination;
 
-use utilities::pg::{conn, SqlResult};
+use utilities::postgres::{conn, SqlResult};
 use utilities::validate_error;
 
 #[derive(Debug, Clone)]

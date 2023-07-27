@@ -14,7 +14,7 @@ pub async fn init() -> Result<(), Box<dyn Error>> {
     let cfg = config::cfg();
 
     // init pg
-    utilities::pg::init();
+    utilities::postgres::init();
 
     // init redis
     utilities::redis::init(
