@@ -1,7 +1,5 @@
 #![cfg(feature = "ws")]
-use crate::ws::hub::{
-    self, MessageForHub, RetrieveRroomsReqType, ChangeRoomReq, RoomChangeType,
-};
+use crate::ws::hub::{self, ChangeRoomReq, MessageForHub, RetrieveRroomsReqType, RoomChangeType};
 use futures_util::future::{select, Either};
 use std::{
     collections::{HashMap, HashSet},
@@ -17,7 +15,7 @@ use tokio::{
 };
 
 use super::hub::{RetrieveRroomsReq, UpdateRooms};
-use utilities::error::BasicResult;
+use util_error::BasicResult;
 
 // use crate::{SessionID, Msg, RoomId};
 

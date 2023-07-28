@@ -1,11 +1,11 @@
 use crate::model::user::{self as user_model, UserStatus, UserType};
 use chrono::{DateTime, Utc};
-use utilities::datetime::FormatDateTime;
-use utilities::error::BasicResult;
-use utilities::response::Pagination;
+use util_datetime::FormatDateTime;
+use util_error::BasicResult;
+use util_response::Pagination;
 
-use utilities::postgres::{conn, SqlResult};
-use utilities::validate_error;
+use util_postgres::{conn, SqlResult};
+use util_error::validate_error;
 
 #[derive(Debug, Clone)]
 pub struct User {

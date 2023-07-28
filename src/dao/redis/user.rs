@@ -1,6 +1,6 @@
 use crate::model::user as user_model;
-use utilities::error::BasicResult;
-use utilities::redis as redis_util;
+use util_error::BasicResult;
+use util_redis as redis_util;
 
 fn email_code_key(email: &str, from: &user_model::SendEmailCodeFrom) -> String {
     format!("{email}_mail_{:?}", from)

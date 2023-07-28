@@ -1,14 +1,13 @@
 use crate::model::user as user_model;
 use meilisearch_sdk::search::Selectors;
-use utilities::error::BasicResult;
-use utilities::meilisearch as meilisearch_util;
-use utilities::response::Pagination;
+use util_error::BasicResult;
+use util_response::Pagination;
 
 pub async fn search(
     key_word: &str,
     page: &Pagination,
 ) -> BasicResult<(Vec<user_model::SearchedUser>, usize)> {
-    let res = meilisearch_util::client()
+    let res = util_meilisearch::client()
         .get_index(super::USER_LIST_INDEX)
         .await?
         .search()

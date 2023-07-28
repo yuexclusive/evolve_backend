@@ -51,7 +51,13 @@ tokio = {version = "1.23", features = ["rt-multi-thread", "macros", "time"]}
 toml = {version = "0"}
 # utilities = {git = "https://github.com/yuexclusive/utilities", features = ["pg", "redis", "meilisearch", "email", "regex", "actix-web", "datetime"]}
 dotenv = "0"
-utilities = {path = "../../utilities", features = ["full"]}
+util_datetime = {path = "../../utilities/util_datetime"}
+util_email = {path = "../../utilities/util_email"}
+util_error = {path = "../../utilities/util_error",features = ["full"]}
+util_meilisearch = {path = "../../utilities/util_meilisearch"}
+util_postgres = {path = "../../utilities/util_postgres"}
+util_redis = {path = "../../utilities/util_redis"}
+util_response = {path = "../../utilities/util_response", features = ["openapi"]}
 utoipa = {version = "2", features = ["actix_extras"], optional = true}
 utoipa-swagger-ui = {version = "2", features = ["actix-web"], optional = true}
 uuid = {version = "1", features = ["v4", "fast-rng", "macro-diagnostics"]}
@@ -59,6 +65,7 @@ uuid = {version = "1", features = ["v4", "fast-rng", "macro-diagnostics"]}
 actix-multipart = {version = "0", optional = true}
 once_cell = "1"
 sanitize-filename = "0"
+anyhow = "1.0.72"
 # syn = "*"
 
 [features]

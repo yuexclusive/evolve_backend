@@ -12,9 +12,8 @@ use rand::Rng;
 
 use serde::{Deserialize, Serialize};
 
-use utilities::{
-    email as email_util, error::BasicResult, hint, response::Pagination, unauthorized,
-};
+use util_error::{hint, unauthorized, BasicResult};
+use util_response::Pagination;
 
 mod private {
     use base64::{engine::general_purpose, Engine as _};
@@ -33,7 +32,8 @@ mod private {
     use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
     use regex::Regex;
     use sha2::Digest;
-    use utilities::{datetime::FormatDateTime, unauthorized, validate_error};
+    use util_datetime::FormatDateTime;
+    use util_error::{unauthorized, validate_error};
     use uuid::Uuid;
     struct Token {
         secret: &'static str,
@@ -331,7 +331,7 @@ pub async fn send_email_code(
     let body = format!("the validation code is: {}", code);
     let (cache_code_res, send_code_res) = tokio::join!(
         redis_user_dao::set_email_code(email, from, code.to_string(), expired_seconds),
-        email_util::send(email, "validation code", &body,)
+        util_email::send(email, "validation code", &body)
     );
     let _ = send_code_res?;
     let _ = cache_code_res?;

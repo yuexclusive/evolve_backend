@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use utilities::redis::derive::{from_redis, to_redis};
+use util_redis::derive::{from_redis, to_redis};
 #[cfg(feature = "openapi")]
 use utoipa::ToSchema;
 

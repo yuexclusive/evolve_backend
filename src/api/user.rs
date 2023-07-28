@@ -3,7 +3,7 @@ use crate::service::user as user_service;
 use actix_web::web::{Json, Path, Query};
 use actix_web::{delete, get, post, put, HttpRequest, Responder, Result};
 use serde::Deserialize;
-use utilities::{data, msg, response::prelude::*};
+use util_response::{data, msg, prelude::*};
 
 use crate::session;
 // use utilities::response::*;

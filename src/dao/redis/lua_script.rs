@@ -1,7 +1,7 @@
 use async_once::AsyncOnce;
 use lazy_static::lazy_static;
 use redis::{aio::ConnectionLike, FromRedisValue};
-use utilities::error::BasicResult;
+use util_error::BasicResult;
 
 lazy_static! {
     pub static ref ROOMS_CHANGE: AsyncOnce<String> =
@@ -11,7 +11,7 @@ lazy_static! {
 }
 
 async fn load_rooms_change() -> BasicResult<String> {
-    let mut conn = utilities::redis::conn().await?;
+    let mut conn = util_redis::conn().await?;
     let files = ["json.lua", "rooms_change.lua"];
     let cmd_str: String = files
         .iter()
@@ -29,7 +29,7 @@ async fn load_rooms_change() -> BasicResult<String> {
 }
 
 async fn load_rooms_retrieve() -> BasicResult<String> {
-    let mut conn = utilities::redis::conn().await?;
+    let mut conn = util_redis::conn().await?;
     let files = ["json.lua", "rooms_retrieve.lua"];
     let cmd_str: String = files
         .iter()

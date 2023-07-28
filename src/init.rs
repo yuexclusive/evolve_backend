@@ -14,10 +14,10 @@ pub async fn init() -> Result<(), Box<dyn Error>> {
     let cfg = config::cfg();
 
     // init pg
-    utilities::postgres::init();
+    util_postgres::init();
 
     // init redis
-    utilities::redis::init(
+    util_redis::init(
         &cfg.redis.host,
         cfg.redis.port,
         cfg.redis.username.clone(),
@@ -26,10 +26,10 @@ pub async fn init() -> Result<(), Box<dyn Error>> {
     .await;
 
     // init meilisearch
-    utilities::meilisearch::init(&cfg.meilisearch.address, &cfg.meilisearch.api_key).await;
+    util_meilisearch::init(&cfg.meilisearch.address, &cfg.meilisearch.api_key).await;
 
     // init email
-    utilities::email::init(
+    util_email::init(
         &cfg.email.username,
         &cfg.email.password,
         &cfg.email.relay,

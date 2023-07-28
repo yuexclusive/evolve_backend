@@ -8,9 +8,9 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio::sync::oneshot;
 use tokio::sync::Mutex;
-use utilities::business_error;
-use utilities::error::BasicResult;
-use utilities::redis::derive::{from_redis, to_redis};
+use util_error::business_error;
+use util_error::BasicResult;
+use util_redis::derive::{from_redis, to_redis};
 
 #[from_redis]
 // #[to_redis]
@@ -96,7 +96,7 @@ impl RedisHub {
         msg_tx: UnboundedSender<MessageForHub>,
     ) -> BasicResult<(UnboundedSender<bool>, oneshot::Receiver<bool>)> {
         let mut msg_subscribe =
-            utilities::redis::subscribe(&format!("{}_{}", room, MESSAGE_CHANNEL)).await?;
+            util_redis::subscribe(&format!("{}_{}", room, MESSAGE_CHANNEL)).await?;
         let (close_tx, mut close_rx) = mpsc::unbounded_channel::<bool>();
         let (close_done_tx, close_done_rx) = oneshot::channel();
         tokio::spawn(async move {
@@ -131,7 +131,7 @@ impl RedisHub {
 
 impl Hub for RedisHub {
     async fn publish(&self, message: MessageForHub) -> BasicResult<()> {
-        let res = utilities::redis::publish(
+        let res = util_redis::publish(
             format!("{}_{}", message.room.clone(), MESSAGE_CHANNEL),
             message,
         )
@@ -147,7 +147,7 @@ impl Hub for RedisHub {
             .arg(0) //keys number
             .arg(&change);
 
-        let value = utilities::redis::conn()
+        let value = util_redis::conn()
             .await?
             .req_packed_command(&cmd)
             .await?;
@@ -168,7 +168,7 @@ impl Hub for RedisHub {
             .arg(0) //keys number
             .arg(&req);
 
-        let value = utilities::redis::conn()
+        let value = util_redis::conn()
             .await?
             .req_packed_command(&cmd)
             .await?;

@@ -1,8 +1,8 @@
 use crate::model::user::CurrentUser;
 use crate::service::user as user_service;
 use actix_web::HttpRequest;
-use utilities::error::BasicResult;
-use utilities::unauthorized;
+use util_error::BasicResult;
+use util_error::unauthorized;
 
 pub async fn get_current_user(req: &HttpRequest) -> BasicResult<CurrentUser> {
     let email = req
@@ -21,7 +21,7 @@ pub async fn get_current_user_by_token(token: &str) -> BasicResult<CurrentUser> 
         use crate::model::user::{UserStatus, UserType};
         use rand::Rng;
         use std::ops::Add;
-        use utilities::datetime::FormatDateTime;
+        use util_datetime::FormatDateTime;
         let now = chrono::Utc::now();
         if token == "token" {
             return Ok(CurrentUser {

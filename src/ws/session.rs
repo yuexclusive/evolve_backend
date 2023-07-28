@@ -10,7 +10,7 @@ use tokio::{pin, sync::mpsc};
 use serde::Serialize;
 
 use super::server::{ChatServerHandle, SessionID, DEFAULT_ROOM};
-use utilities::datetime::FormatDateTime;
+use util_datetime::FormatDateTime;
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);

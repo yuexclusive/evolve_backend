@@ -8,7 +8,7 @@ use actix_web::{
     Error,
 };
 use futures_util::future::LocalBoxFuture;
-use utilities::unauthorized;
+use util_error::unauthorized;
 
 // There are two steps in middleware processing.
 // 1. Middleware initialization, middleware factory gets called with

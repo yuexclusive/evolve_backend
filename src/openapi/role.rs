@@ -1,5 +1,5 @@
 use crate::openapi::security::SecurityAddon;
-use utilities::response::MsgResponse;
+use util_response::MsgResponse;
 use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
