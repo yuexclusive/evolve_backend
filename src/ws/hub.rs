@@ -1,11 +1,10 @@
 use crate::dao::redis::lua_script;
-use futures::StreamExt;
 use redis::aio::ConnectionLike;
 use redis::FromRedisValue;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::{collections::HashMap, sync::Arc};
-use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{self, Sender, UnboundedReceiver, UnboundedSender};
 use tokio::sync::oneshot;
 use tokio::sync::Mutex;
 use util_error::business_error;
@@ -88,35 +87,9 @@ pub trait Hub {
 
 pub struct RedisHub {
     message_tx: UnboundedSender<MessageForHub>,
-    channels: Arc<Mutex<HashMap<String, (UnboundedSender<bool>, oneshot::Receiver<bool>)>>>,
+    channels: Arc<Mutex<HashMap<String, (Sender<()>, oneshot::Receiver<()>)>>>,
 }
 impl RedisHub {
-    async fn subscribe(
-        room: &str,
-        msg_tx: UnboundedSender<MessageForHub>,
-    ) -> BasicResult<(UnboundedSender<bool>, oneshot::Receiver<bool>)> {
-        let mut msg_subscribe =
-            util_redis::subscribe(&format!("{}_{}", room, MESSAGE_CHANNEL)).await?;
-        let (close_tx, mut close_rx) = mpsc::unbounded_channel::<bool>();
-        let (close_done_tx, close_done_rx) = oneshot::channel();
-        tokio::spawn(async move {
-            'l: loop {
-                tokio::select! {
-                   Some(msg) = msg_subscribe.next()=>{
-                    let payload = msg.get_payload::<MessageForHub>().unwrap();
-                    msg_tx.send(payload).unwrap();
-                   }
-                   Some(v)= close_rx.recv()=>{
-                     close_done_tx.send(v).unwrap();
-                     break 'l
-                   }
-                }
-            }
-        });
-
-        Ok((close_tx, close_done_rx))
-    }
-
     pub fn new() -> (Self, UnboundedReceiver<MessageForHub>) {
         let (msg_tx, msg_rx) = mpsc::unbounded_channel();
         (
@@ -147,10 +120,7 @@ impl Hub for RedisHub {
             .arg(0) //keys number
             .arg(&change);
 
-        let value = util_redis::conn()
-            .await?
-            .req_packed_command(&cmd)
-            .await?;
+        let value = util_redis::conn().await?.req_packed_command(&cmd).await?;
 
         let res = RoomChangeForHubResponse::from_redis_value(&value)?;
 
@@ -168,10 +138,7 @@ impl Hub for RedisHub {
             .arg(0) //keys number
             .arg(&req);
 
-        let value = util_redis::conn()
-            .await?
-            .req_packed_command(&cmd)
-            .await?;
+        let value = util_redis::conn().await?.req_packed_command(&cmd).await?;
 
         let data = UpdateRooms::from_redis_value(&value)?;
         Ok(data)
@@ -196,8 +163,14 @@ impl Hub for RedisHub {
     async fn subscribe_room(&self, room: &str) -> BasicResult<()> {
         let mut channels = self.channels.lock().await;
         if !channels.contains_key(room) {
-            let (close, close_done) = Self::subscribe(&room, self.message_tx.clone()).await?;
-            channels.insert(room.to_string(), (close, close_done));
+            let message_tx = self.message_tx.clone();
+            let (close_tx, close_done_rx) =
+                util_redis::subscribe(&format!("{}_{}", room, MESSAGE_CHANNEL), move |msg| {
+                    let payload = msg.get_payload::<MessageForHub>().unwrap();
+                    message_tx.send(payload).unwrap();
+                })
+                .await?;
+            channels.insert(room.to_string(), (close_tx, close_done_rx));
         }
         Ok(())
     }
@@ -205,7 +178,7 @@ impl Hub for RedisHub {
     async fn unsubscribe_room(&self, room: &str) -> BasicResult<()> {
         let mut channels = self.channels.lock().await;
         if let Some((close, close_done)) = channels.remove(room) {
-            close.send(true).unwrap();
+            close.send(()).await.unwrap();
             close_done.await.unwrap(); //waiting for close done
         }
         Ok(())

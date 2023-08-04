@@ -137,9 +137,12 @@ pub struct SendEmailCodeReq {
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
 #[derive(Deserialize)]
 pub struct ChangePasswordReq {
+    /// email
     pub email: String,
+    /// validate code
     pub code: String,
-    pub pwd: String,
+    /// password
+    pub pwd: String, 
 }
 
 #[cfg_attr(feature = "openapi", derive(ToSchema))]
