@@ -499,7 +499,7 @@ async fn process_text_msg(
                     let old_name = name.clone();
                     *name = new_name.to_string();
                     chat_server
-                        .change_name(session_id.clone(), new_name.clone())
+                        .change_name(session_id.clone(), new_name)
                         .await;
 
                     notify(NotifyType::UpdateSession {

@@ -11,7 +11,7 @@ pub async fn search(
         .get_index(super::USER_LIST_INDEX)
         .await?
         .search()
-        // .with_sort(&["created_at:desc"])
+        .with_sort(&["updated_at:desc"])
         .with_attributes_to_highlight(Selectors::Some(&[
             "email",
             "type",
