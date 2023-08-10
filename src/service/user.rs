@@ -347,6 +347,9 @@ pub async fn update(
         private::validate_mobile(mobile)?;
     }
     let res = pg_user_dao::update(id, name, mobile).await?;
+    if redis_user_dao::exist_current_user(&res.email).await? {
+        private::set_current_user(&res, &chrono::Utc::now()).await?;
+    }
     private::update_search(res.clone()).await?;
     Ok(res.into())
 }

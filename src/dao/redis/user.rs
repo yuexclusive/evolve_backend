@@ -37,6 +37,11 @@ pub async fn exist_email_code(
     Ok(res)
 }
 
+pub async fn exist_current_user(email: &str) -> BasicResult<bool> {
+    let res = redis_util::exists(user_agent_key(&email)).await?;
+    Ok(res)
+}
+
 pub async fn set_current_user(
     current_user: user_model::CurrentUser,
     expired_seconds: usize,
