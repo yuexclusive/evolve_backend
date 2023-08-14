@@ -19,7 +19,7 @@ mod private {
     use base64::{engine::general_purpose, Engine as _};
 
     const EMAIL_VALIDATE_REGEX: &str = r#"\w[-\w.+]*@([A-Za-z0-9][-A-Za-z0-9]+\.)+[A-Za-z]{2,14}"#;
-    const PWD_VALIDATE_REGEX: &str = r#"^[a-zA-Z]{1}\w{5,17}$"#;
+    const PWD_VALIDATE_REGEX: &str = r#"(?=.*[a-z])(?=.*[0-9])[a-zA-Z0-9]{6,18}"#;
     const MOBILE_VALIDATE_REGEX: &str = r#"0?(13|14|15|17|18|19)[0-9]{9}"#;
 
     use std::cmp::Ordering;
@@ -30,7 +30,7 @@ mod private {
     };
     use chrono::{DateTime, TimeZone, Utc};
     use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
-    use regex::Regex;
+    use fancy_regex::Regex;
     use sha2::Digest;
     use util_datetime::FormatDateTime;
     use util_error::{unauthorized, validate_error};
@@ -92,7 +92,7 @@ mod private {
             true => validate_error!("please type in email").into(),
             _ => {
                 let reg = Regex::new(EMAIL_VALIDATE_REGEX)?;
-                match reg.is_match(email) {
+                match reg.is_match(email)? {
                     false => validate_error!("invalid email").into(),
                     _ => Ok(()),
                 }
@@ -105,7 +105,7 @@ mod private {
             true => Err(validate_error!("please type in passwd")),
             _ => {
                 let reg = Regex::new(PWD_VALIDATE_REGEX)?; //6位字母+数字,字母开头
-                match reg.is_match(pwd) {
+                match reg.is_match(pwd)? {
                     false => {
                         validate_error!("invalid passowrd: length>=6, a-z and 0-9 is demanded")
                             .into()
@@ -118,7 +118,7 @@ mod private {
 
     pub(super) fn validate_mobile(mobile: &str) -> BasicResult<()> {
         let reg = Regex::new(MOBILE_VALIDATE_REGEX)?;
-        match reg.is_match(mobile) {
+        match reg.is_match(mobile)? {
             false => validate_error!("invalid mobile").into(),
             _ => Ok(()),
         }

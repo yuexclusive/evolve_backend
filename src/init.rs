@@ -28,14 +28,14 @@ pub async fn init() -> Result<(), Box<dyn Error>> {
     // init meilisearch
     util_meilisearch::init(&cfg.meilisearch.address, &cfg.meilisearch.api_key).await;
 
-    // // init email
-    // util_email::init(
-    //     &cfg.email.username,
-    //     &cfg.email.password,
-    //     &cfg.email.relay,
-    //     cfg.email.port,
-    // )
-    // .await;
+    // init email
+    util_email::init(
+        &cfg.email.username,
+        &cfg.email.password,
+        &cfg.email.relay,
+        cfg.email.port,
+    )
+    .await;
 
     // load user search data
     user_service::load_search().await?;
