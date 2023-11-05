@@ -29,8 +29,8 @@ mod private {
         Serialize,
     };
     use chrono::{DateTime, TimeZone, Utc};
-    use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
     use fancy_regex::Regex;
+    use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
     use sha2::Digest;
     use util_datetime::FormatDateTime;
     use util_error::{unauthorized, validate_error};
@@ -333,8 +333,8 @@ pub async fn send_email_code(
         redis_user_dao::set_email_code(email, from, code.to_string(), expired_seconds),
         util_email::send(email, "validation code", &body)
     );
-    let _ = send_code_res?;
     let _ = cache_code_res?;
+    let _ = send_code_res?;
     Ok(expired_seconds)
 }
 

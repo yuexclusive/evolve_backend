@@ -14,7 +14,7 @@ mod upload_file;
 mod ws;
 
 use actix_web::{get, web::scope, App, HttpServer, Result};
-use std::error::Error;
+use util_error::ErrorKind;
 
 #[get("/ping")]
 pub async fn ping() -> &'static str {
@@ -22,7 +22,7 @@ pub async fn ping() -> &'static str {
 }
 
 #[actix_web::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), ErrorKind> {
     init::init().await?;
 
     #[cfg(feature = "ws")]

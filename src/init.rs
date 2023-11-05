@@ -1,9 +1,9 @@
 use crate::config;
 use crate::service::user as user_service;
 use dotenv::dotenv;
-use std::error::Error;
+use util_error::ErrorKind;
 
-pub async fn init() -> Result<(), Box<dyn Error>> {
+pub async fn init() -> Result<(), ErrorKind> {
     // env
     dotenv().ok();
 
