@@ -209,6 +209,6 @@ pub async fn update(req: Json<user_model::UserUpdateReq>) -> Result<impl Respond
 ))]
 #[delete("/delete")]
 pub async fn delete(req: Json<user_model::UserDeleteReq>) -> Result<impl Responder> {
-    let res = user_service::delete(&req.ids).await?;
-    data!(res)
+    let _ = user_service::delete(&req.ids).await?;
+    msg!("ok")
 }
