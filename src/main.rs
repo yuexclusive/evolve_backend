@@ -56,3 +56,20 @@ async fn main() -> Result<(), ErrorKind> {
     log::info!("server stoped");
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use actix_web::{body, test, web, App};
+
+    use super::*;
+
+    #[actix_web::test]
+    async fn test_index_get() -> Result<(), Box<dyn std::error::Error>> {
+        let app = test::init_service(App::new().service(ping)).await;
+        let req = test::TestRequest::get().uri("/ping").to_request();
+        let resp = test::call_service(&app, req).await;
+        let bytes = body::to_bytes(resp.into_body()).await?;
+        assert_eq!(bytes, web::Bytes::from_static(b"pong"));
+        Ok(())
+    }
+}

@@ -52,7 +52,7 @@ pub fn cfg() -> &'static Config {
 mod tests {
     use super::*;
     #[test]
-    fn test_1() {
+    fn test_config_name() {
         let name = &cfg().name;
         assert_eq!("evolve_backend", name)
     }
