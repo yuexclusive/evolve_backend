@@ -23,7 +23,7 @@ pub async fn set_email_code(
     email: &str,
     from: &user_model::SendEmailCodeFrom,
     code: impl Into<String>,
-    expired_seconds: usize,
+    expired_seconds: u64,
 ) -> BasicResult<()> {
     redis_util::set_ex(email_code_key(email, from), code.into(), expired_seconds).await?;
     Ok(())
@@ -44,7 +44,7 @@ pub async fn exist_current_user(email: &str) -> BasicResult<bool> {
 
 pub async fn set_current_user(
     current_user: user_model::CurrentUser,
-    expired_seconds: usize,
+    expired_seconds: u64,
 ) -> BasicResult<()> {
     redis_util::set_ex(
         user_agent_key(&current_user.email),

@@ -38,7 +38,7 @@ mod private {
     struct Token {
         secret: &'static str,
         algorithm: Algorithm,
-        duration: usize,
+        duration: u64,
     }
 
     const TOKEN: Token = Token {
@@ -50,11 +50,11 @@ mod private {
     #[derive(Debug, Serialize, Deserialize)]
     struct Claims {
         aud: String, // Optional. Audience
-        exp: usize, // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
-        iat: usize, // Optional. Issued at (as UTC timestamp)
-                    // sub: Option<String>, // Optional. Subject (whom token refers to)
-                    // iss: String, // Optional. Issuer
-                    // nbf: usize, // Optional. Not Before (as UTC timestamp)
+        exp: u64, // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
+        iat: u64, // Optional. Issued at (as UTC timestamp)
+                  // sub: Option<String>, // Optional. Subject (whom token refers to)
+                  // iss: String, // Optional. Issuer
+                  // nbf: usize, // Optional. Not Before (as UTC timestamp)
     }
 
     pub(super) fn hash_password(password: impl AsRef<str>, salt: impl AsRef<str>) -> String {
@@ -171,7 +171,7 @@ mod private {
         now: &DateTime<Utc>,
     ) -> BasicResult<String> {
         let header = Header::new(TOKEN.algorithm);
-        let iat = now.timestamp() as usize;
+        let iat = now.timestamp() as u64;
         let exp = iat + TOKEN.duration;
 
         let claims = Claims {
@@ -311,7 +311,7 @@ pub async fn change_pwd(email: &str, code: &str, new_pwd: &str) -> BasicResult<u
 pub async fn send_email_code(
     email: &str,
     from: &user_model::SendEmailCodeFrom,
-) -> BasicResult<usize> {
+) -> BasicResult<u64> {
     match from {
         user_model::SendEmailCodeFrom::Register => validate_not_exist_email(email).await?,
         user_model::SendEmailCodeFrom::ChangePwd => {
