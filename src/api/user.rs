@@ -13,14 +13,14 @@ use crate::session;
     path = "/api/login",
     responses(
         (status = 200, description = "successfully", body = LoginDataResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
+        (status = 400, description = "bad request", body = MsgResponseWithErrCode),
+        (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
 ))]
 #[post("/login")]
 pub async fn login(req: Json<user_model::LoginReq>) -> Result<impl Responder> {
     let res = user_service::login(&req.email, &req.pwd).await?;
-    data!(res)
+    Ok(Json(data!(res)))
 }
 
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -28,15 +28,15 @@ pub async fn login(req: Json<user_model::LoginReq>) -> Result<impl Responder> {
     path = "/api/change_pwd",
     responses(
         (status = 200, description = "successfully", body = MsgResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
+        (status = 400, description = "bad request", body = MsgResponseWithErrCode),
+        (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
 ))]
 #[put("/change_pwd")]
 pub async fn change_pwd(req: Json<user_model::ChangePasswordReq>) -> Result<impl Responder> {
     let _ = user_service::change_pwd(&req.email, &req.code, &req.pwd).await?;
 
-    msg!("ok")
+    Ok(Json(msg!("ok")))
 }
 
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -44,14 +44,14 @@ pub async fn change_pwd(req: Json<user_model::ChangePasswordReq>) -> Result<impl
     path = "/api/send_email_code",
     responses(
         (status = 200, description = "successfully", body = SendEmailResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
+        (status = 400, description = "bad request", body = MsgResponseWithErrCode),
+        (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
 ))]
 #[post("/send_email_code")]
 pub async fn send_email_code(req: Json<user_model::SendEmailCodeReq>) -> Result<impl Responder> {
     let res = user_service::send_email_code(&req.email, &req.from).await?;
-    data!(res)
+    Ok(Json(data!(res)))
 }
 
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -59,8 +59,8 @@ pub async fn send_email_code(req: Json<user_model::SendEmailCodeReq>) -> Result<
     path = "/api/register",
     responses(
         (status = 200, description = "successfully", body = MsgResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
+        (status = 400, description = "bad request", body = MsgResponseWithErrCode),
+        (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
 ))]
 #[post("/register")]
@@ -73,7 +73,7 @@ pub async fn register(req: Json<user_model::RegisterReq>) -> Result<impl Respond
         req.mobile.as_deref(),
     )
     .await?;
-    msg!("ok")
+    Ok(Json(msg!("ok")))
 }
 
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -83,15 +83,15 @@ pub async fn register(req: Json<user_model::RegisterReq>) -> Result<impl Respond
     ),
     responses(
         (status = 200, description = "successfully", body = MsgResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
+        (status = 400, description = "bad request", body = MsgResponseWithErrCode),
+        (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
 ))]
 #[get("/validate_exist_email/{email}")]
 pub async fn validate_exist_email(email: Path<String>) -> Result<impl Responder> {
     user_service::validate_exist_email(&email.into_inner()).await?;
 
-    msg!("ok")
+    Ok(Json(msg!("ok")))
 }
 
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -101,15 +101,15 @@ pub async fn validate_exist_email(email: Path<String>) -> Result<impl Responder>
     ),
     responses(
         (status = 200, description = "successfully", body = MsgResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
+        (status = 400, description = "bad request", body = MsgResponseWithErrCode),
+        (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
 ))]
 #[get("/validate_not_exist_email/{email}")]
 pub async fn validate_not_exist_email(email: Path<String>) -> Result<impl Responder> {
     user_service::validate_not_exist_email(&email.into_inner()).await?;
 
-    msg!("ok")
+    Ok(Json(msg!("ok")))
 }
 
 #[cfg_attr(feature = "openapi", derive(utoipa::IntoParams))]
@@ -124,9 +124,9 @@ pub struct SearchReq {
     ),
     responses(
         (status = 200, description = "successfully", body = UserSearchResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 401, description = "unthorized", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
+        (status = 400, description = "bad request", body = MsgResponseWithErrCode),
+        (status = 401, description = "unthorized", body = MsgResponseWithErrCode),
+        (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     ),
     security(
         ("token" = [])
@@ -135,7 +135,7 @@ pub struct SearchReq {
 #[get("/search")]
 pub async fn search(req: Query<SearchReq>, page: Query<Pagination>) -> Result<impl Responder> {
     let (data, total) = user_service::search(&req.key_word, &page).await?;
-    data!(data, total)
+    Ok(Json(data!(data, total)))
 }
 
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -145,8 +145,8 @@ pub async fn search(req: Query<SearchReq>, page: Query<Pagination>) -> Result<im
     ),
     responses(
         (status = 200, description = "successfully", body = UserGetResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
+        (status = 400, description = "bad request", body = MsgResponseWithErrCode),
+        (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     ),
     security(
         ("token" = [])
@@ -155,16 +155,16 @@ pub async fn search(req: Query<SearchReq>, page: Query<Pagination>) -> Result<im
 #[get("/{id}")]
 pub async fn get(id: Path<i64>) -> Result<impl Responder> {
     let res = user_service::get(id.into_inner()).await?;
-    data!(res)
+    Ok(Json(data!(res)))
 }
 
 #[cfg_attr(feature = "openapi", utoipa::path(
     path = "/api/user/get_current_user",
     responses(
         (status = 200, description = "successfully", body = CurrentUserResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 401, description = "unthorized", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
+        (status = 400, description = "bad request", body = MsgResponseWithErrCode),
+        (status = 401, description = "unthorized", body = MsgResponseWithErrCode),
+        (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     ),
     security(
         ("token" = [])
@@ -172,7 +172,7 @@ pub async fn get(id: Path<i64>) -> Result<impl Responder> {
 ))]
 #[get("/get_current_user")]
 pub async fn get_current_user(req: HttpRequest) -> Result<impl Responder> {
-    data!(session::get_current_user(&req).await?)
+    Ok(Json(data!(session::get_current_user(&req).await?)))
 }
 
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -180,9 +180,9 @@ pub async fn get_current_user(req: HttpRequest) -> Result<impl Responder> {
     path = "/api/user/update",
     responses(
         (status = 200, description = "successfully", body = UserUpdateResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 401, description = "unthorized", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
+        (status = 400, description = "bad request", body = MsgResponseWithErrCode),
+        (status = 401, description = "unthorized", body = MsgResponseWithErrCode),
+        (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     ),
     security(
         ("token" = [])
@@ -191,7 +191,7 @@ pub async fn get_current_user(req: HttpRequest) -> Result<impl Responder> {
 #[put("/update")]
 pub async fn update(req: Json<user_model::UserUpdateReq>) -> Result<impl Responder> {
     let res = user_service::update(req.id, req.mobile.as_deref(), req.name.as_deref()).await?;
-    data!(res)
+    Ok(Json(data!(res)))
 }
 
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -199,9 +199,9 @@ pub async fn update(req: Json<user_model::UserUpdateReq>) -> Result<impl Respond
     path = "/api/user/delete",
     responses(
         (status = 200, description = "successfully", body = MsgResponse),
-        (status = 400, description = "bad request", body = ErrorResponse),
-        (status = 401, description = "unthorized", body = ErrorResponse),
-        (status = 500, description = "internal server error", body = ErrorResponse)
+        (status = 400, description = "bad request", body = MsgResponseWithErrCode),
+        (status = 401, description = "unthorized", body = MsgResponseWithErrCode),
+        (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     ),
     security(
         ("token" = [])
@@ -210,5 +210,5 @@ pub async fn update(req: Json<user_model::UserUpdateReq>) -> Result<impl Respond
 #[delete("/delete")]
 pub async fn delete(req: Json<user_model::UserDeleteReq>) -> Result<impl Responder> {
     let _ = user_service::delete(&req.ids).await?;
-    msg!("ok")
+    Ok(Json(msg!("ok")))
 }

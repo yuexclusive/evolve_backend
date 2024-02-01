@@ -1,5 +1,5 @@
 use crate::openapi::security::SecurityAddon;
-use util_response::MsgResponse;
+use util_response::{ MsgResponse, MsgResponseWithErrCode };
 use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
@@ -8,6 +8,7 @@ use utoipa::OpenApi;
     components(
         schemas(
             MsgResponse,
+            MsgResponseWithErrCode,
         )
     ),
     tags(

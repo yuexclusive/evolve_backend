@@ -55,7 +55,7 @@ util_error = {git = "https://github.com/yuexclusive/utilities.git", features = [
 util_meilisearch = {git = "https://github.com/yuexclusive/utilities.git"}
 util_postgres = {git = "https://github.com/yuexclusive/utilities.git"}
 util_redis = {git = "https://github.com/yuexclusive/utilities.git"}
-util_response = {git = "https://github.com/yuexclusive/utilities.git", features = ["openapi"]}
+util_response = {git = "https://github.com/yuexclusive/utilities.git"}
 utoipa = {version = "2", features = ["actix_extras"], optional = true}
 utoipa-swagger-ui = {version = "2", features = ["actix-web"], optional = true}
 uuid = {version = "1", features = ["v4", "fast-rng", "macro-diagnostics"]}

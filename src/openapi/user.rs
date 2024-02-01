@@ -1,5 +1,5 @@
 use utoipa::OpenApi;
-use util_response::{MsgResponse,ErrorResponse};
+use util_response::{ MsgResponse, MsgResponseWithErrCode };
 use crate::api::user as user_controller;
 use crate::model::user as user_model;
 use crate::openapi::security::SecurityAddon;
@@ -40,7 +40,7 @@ use crate::openapi::security::SecurityAddon;
             user_model::UserUpdateReq,
             user_model::UserUpdateResponse,
             MsgResponse,
-            ErrorResponse,
+            MsgResponseWithErrCode,
             user_model::UserDeleteReq,
         )
     ),
