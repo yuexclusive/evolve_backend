@@ -1,4 +1,3 @@
-#![cfg(feature = "openapi")]
 pub mod role;
 pub mod security;
 pub mod user;

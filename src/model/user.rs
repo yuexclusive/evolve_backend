@@ -1,11 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use util_redis::derive::{from_redis, to_redis};
-#[cfg(feature = "openapi")]
 use utoipa::ToSchema;
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(sqlx::Type, Debug, Serialize, Deserialize, Clone)]
+#[derive(ToSchema, sqlx::Type, Debug, Serialize, Deserialize, Clone)]
 // #[sqlx(rename_all = "snake_case")]
 // #[serde(rename_all(serialize = "snake_case", deserialize = "snake_case"))]
 pub enum UserType {
@@ -14,8 +12,7 @@ pub enum UserType {
     SuperAdmin,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(sqlx::Type, Debug, Serialize, Deserialize, Clone)]
+#[derive(ToSchema, sqlx::Type, Debug, Serialize, Deserialize, Clone)]
 // #[sqlx(rename_all = "snake_case")]
 // #[serde(rename_all(serialize = "snake_case", deserialize = "snake_case"))]
 pub enum UserStatus {
@@ -23,15 +20,13 @@ pub enum UserStatus {
     Disabled,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize, Debug)]
+#[derive(ToSchema, Deserialize, Debug)]
 pub enum SendEmailCodeFrom {
     Register,
     ChangePwd,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(ToSchema, Serialize, Deserialize, Clone, Debug)]
 pub struct User {
     pub id: i64,
     pub r#type: UserType,
@@ -44,8 +39,7 @@ pub struct User {
     pub updated_at: Option<String>,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(ToSchema, Serialize, Deserialize, Clone, Debug)]
 pub struct UserFormatter {
     pub r#type: String,
     pub email: String,
@@ -93,8 +87,7 @@ impl From<Map<String, Value>> for UserFormatter {
     }
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Serialize, Deserialize)]
+#[derive(ToSchema, Serialize, Deserialize)]
 pub struct SearchedUser {
     pub user: User,
     pub formatter: UserFormatter,
@@ -102,7 +95,7 @@ pub struct SearchedUser {
 }
 
 // #[derive(Debug, Clone, Serialize, Deserialize, ToRedisArgs, FromRedisValue, ToSchema)]
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
+#[derive(ToSchema)]
 #[to_redis]
 #[from_redis]
 pub struct CurrentUser {
@@ -118,80 +111,69 @@ pub struct CurrentUser {
     pub expire_at: String,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct LoginReq {
-    #[cfg_attr(feature = "openapi", schema(example = "yu.exclusive@icloud.com"))]
+    #[schema(example = "yu.exclusive@icloud.com")]
     pub email: String,
-    #[cfg_attr(feature = "openapi", schema(example = "a111111"))]
+    #[schema(example = "a111111")]
     pub pwd: String,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct SendEmailCodeReq {
     pub email: String,
     pub from: SendEmailCodeFrom,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct ChangePasswordReq {
     /// email
     pub email: String,
     /// validate code
     pub code: String,
     /// password
-    pub pwd: String, 
+    pub pwd: String,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct LoginDataResponse {
     pub data: String,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct CurrentUserResponse {
     pub data: CurrentUser,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct UserGetResponse {
     pub data: User,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct UserSearchResponse {
     pub data: Vec<SearchedUser>,
     pub total: usize,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct SendEmailResponse {
     pub data: usize,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct UserUpdateReq {
     pub id: i64,
     pub name: Option<String>,
     pub mobile: Option<String>,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct UserUpdateResponse {
     pub data: User,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct RegisterReq {
     pub email: String,
     pub pwd: String,
@@ -200,8 +182,7 @@ pub struct RegisterReq {
     pub mobile: Option<String>,
 }
 
-#[cfg_attr(feature = "openapi", derive(ToSchema))]
-#[derive(Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct UserDeleteReq {
     pub ids: Vec<i64>,
 }

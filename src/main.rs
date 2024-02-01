@@ -35,7 +35,6 @@ async fn main() -> Result<(), ErrorKind> {
             .wrap(middleware::cors::cors());
 
         serve_api!(app);
-        #[cfg(feature = "openapi")]
         serve_openapi!(app);
         #[cfg(feature = "ws")]
         serve_ws!(app, cmd_tx_for_req);

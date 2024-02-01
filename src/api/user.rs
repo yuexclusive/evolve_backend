@@ -8,7 +8,7 @@ use util_response::{data, msg, prelude::*};
 use crate::session;
 // use utilities::response::*;
 
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[utoipa::path(
     request_body = LoginReq,
     path = "/api/login",
     responses(
@@ -16,14 +16,14 @@ use crate::session;
         (status = 400, description = "bad request", body = MsgResponseWithErrCode),
         (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
-))]
+)]
 #[post("/login")]
 pub async fn login(req: Json<user_model::LoginReq>) -> Result<impl Responder> {
     let res = user_service::login(&req.email, &req.pwd).await?;
     Ok(Json(data!(res)))
 }
 
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[utoipa::path(
     request_body = ChangePasswordReq,
     path = "/api/change_pwd",
     responses(
@@ -31,7 +31,7 @@ pub async fn login(req: Json<user_model::LoginReq>) -> Result<impl Responder> {
         (status = 400, description = "bad request", body = MsgResponseWithErrCode),
         (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
-))]
+)]
 #[put("/change_pwd")]
 pub async fn change_pwd(req: Json<user_model::ChangePasswordReq>) -> Result<impl Responder> {
     let _ = user_service::change_pwd(&req.email, &req.code, &req.pwd).await?;
@@ -39,7 +39,7 @@ pub async fn change_pwd(req: Json<user_model::ChangePasswordReq>) -> Result<impl
     Ok(Json(msg!("ok")))
 }
 
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[utoipa::path(
     request_body = SendEmailCodeReq,
     path = "/api/send_email_code",
     responses(
@@ -47,14 +47,14 @@ pub async fn change_pwd(req: Json<user_model::ChangePasswordReq>) -> Result<impl
         (status = 400, description = "bad request", body = MsgResponseWithErrCode),
         (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
-))]
+)]
 #[post("/send_email_code")]
 pub async fn send_email_code(req: Json<user_model::SendEmailCodeReq>) -> Result<impl Responder> {
     let res = user_service::send_email_code(&req.email, &req.from).await?;
     Ok(Json(data!(res)))
 }
 
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[utoipa::path(
     request_body = RegisterReq,
     path = "/api/register",
     responses(
@@ -62,7 +62,7 @@ pub async fn send_email_code(req: Json<user_model::SendEmailCodeReq>) -> Result<
         (status = 400, description = "bad request", body = MsgResponseWithErrCode),
         (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
-))]
+)]
 #[post("/register")]
 pub async fn register(req: Json<user_model::RegisterReq>) -> Result<impl Responder> {
     user_service::register(
@@ -76,7 +76,7 @@ pub async fn register(req: Json<user_model::RegisterReq>) -> Result<impl Respond
     Ok(Json(msg!("ok")))
 }
 
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[utoipa::path(
     path = "/api/validate_exist_email/{email}",
     params(
         ("email", description = "email")
@@ -86,7 +86,7 @@ pub async fn register(req: Json<user_model::RegisterReq>) -> Result<impl Respond
         (status = 400, description = "bad request", body = MsgResponseWithErrCode),
         (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
-))]
+)]
 #[get("/validate_exist_email/{email}")]
 pub async fn validate_exist_email(email: Path<String>) -> Result<impl Responder> {
     user_service::validate_exist_email(&email.into_inner()).await?;
@@ -94,7 +94,7 @@ pub async fn validate_exist_email(email: Path<String>) -> Result<impl Responder>
     Ok(Json(msg!("ok")))
 }
 
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[utoipa::path(
     path = "/api/validate_not_exist_email/{email}",
     params(
         ("email", description = "email")
@@ -104,7 +104,7 @@ pub async fn validate_exist_email(email: Path<String>) -> Result<impl Responder>
         (status = 400, description = "bad request", body = MsgResponseWithErrCode),
         (status = 500, description = "internal server error", body = MsgResponseWithErrCode)
     )
-))]
+)]
 #[get("/validate_not_exist_email/{email}")]
 pub async fn validate_not_exist_email(email: Path<String>) -> Result<impl Responder> {
     user_service::validate_not_exist_email(&email.into_inner()).await?;
@@ -112,12 +112,11 @@ pub async fn validate_not_exist_email(email: Path<String>) -> Result<impl Respon
     Ok(Json(msg!("ok")))
 }
 
-#[cfg_attr(feature = "openapi", derive(utoipa::IntoParams))]
-#[derive(Deserialize)]
+#[derive(utoipa::IntoParams, Deserialize)]
 pub struct SearchReq {
     key_word: String,
 }
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[utoipa::path(
     path = "/api/user/search",
     params(
         SearchReq, Pagination
@@ -131,14 +130,14 @@ pub struct SearchReq {
     security(
         ("token" = [])
     )
-))]
+)]
 #[get("/search")]
 pub async fn search(req: Query<SearchReq>, page: Query<Pagination>) -> Result<impl Responder> {
     let (data, total) = user_service::search(&req.key_word, &page).await?;
     Ok(Json(data!(data, total)))
 }
 
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[utoipa::path(
     path = "/api/user/{id}",
     params(
         ("id", description = "user id")
@@ -151,14 +150,14 @@ pub async fn search(req: Query<SearchReq>, page: Query<Pagination>) -> Result<im
     security(
         ("token" = [])
     )
-))]
+)]
 #[get("/{id}")]
 pub async fn get(id: Path<i64>) -> Result<impl Responder> {
     let res = user_service::get(id.into_inner()).await?;
     Ok(Json(data!(res)))
 }
 
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[utoipa::path(
     path = "/api/user/get_current_user",
     responses(
         (status = 200, description = "successfully", body = CurrentUserResponse),
@@ -169,13 +168,13 @@ pub async fn get(id: Path<i64>) -> Result<impl Responder> {
     security(
         ("token" = [])
     )
-))]
+)]
 #[get("/get_current_user")]
 pub async fn get_current_user(req: HttpRequest) -> Result<impl Responder> {
     Ok(Json(data!(session::get_current_user(&req).await?)))
 }
 
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[utoipa::path(
     request_body = UserUpdateReq,
     path = "/api/user/update",
     responses(
@@ -187,14 +186,14 @@ pub async fn get_current_user(req: HttpRequest) -> Result<impl Responder> {
     security(
         ("token" = [])
     )
-))]
+)]
 #[put("/update")]
 pub async fn update(req: Json<user_model::UserUpdateReq>) -> Result<impl Responder> {
     let res = user_service::update(req.id, req.mobile.as_deref(), req.name.as_deref()).await?;
     Ok(Json(data!(res)))
 }
 
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[utoipa::path(
     request_body = UserDeleteReq,
     path = "/api/user/delete",
     responses(
@@ -206,7 +205,7 @@ pub async fn update(req: Json<user_model::UserUpdateReq>) -> Result<impl Respond
     security(
         ("token" = [])
     )
-))]
+)]
 #[delete("/delete")]
 pub async fn delete(req: Json<user_model::UserDeleteReq>) -> Result<impl Responder> {
     let _ = user_service::delete(&req.ids).await?;
